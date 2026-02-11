@@ -17,8 +17,8 @@ export const getAllCommentKeys = (): string[] => {
 };
 
 // Get all comments across all articles
-export const getAllComments = (): Comment[] => {
-    const articles = getArticles();
+export const getAllComments = async (): Promise<Comment[]> => {
+    const articles = await getArticles();
     const articleMap = new Map(articles.map(a => [a.id, { title: a.title, slug: a.slug }]));
 
     const allComments: Comment[] = [];

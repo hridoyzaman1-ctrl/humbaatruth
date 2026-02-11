@@ -82,9 +82,9 @@ const AdminComments = () => {
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-  const loadComments = useCallback(() => {
-    const allComments = getAllComments() as Comment[];
-    setComments(allComments);
+  const loadComments = useCallback(async () => {
+    const allComments = await getAllComments();
+    setComments(allComments as any);
   }, []);
 
   useEffect(() => {

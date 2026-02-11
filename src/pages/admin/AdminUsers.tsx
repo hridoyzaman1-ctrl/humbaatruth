@@ -36,7 +36,8 @@ const AdminUsers = () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      toast.error('Failed to load users');
+      console.error('AdminUsers Fetch Error:', error);
+      toast.error(`Failed to load users: ${error.message}`);
     } else {
       // Map DB fields to AdminUser type
       const mapped: AdminUser[] = (data || []).map((u: any) => ({

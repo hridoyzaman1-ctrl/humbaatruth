@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { categories as initialCategories } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Category } from '@/types/news';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { getCategories, saveCategories, CategoryConfig } from '@/lib/settingsService';
+import { getCategories, saveCategories } from '@/lib/settingsService';
 
 interface CategoryItem {
   id: Category;
@@ -25,7 +25,19 @@ interface CategoryItem {
 
 const AdminCategories = () => {
   const { hasPermission } = useAdminAuth();
-  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>(getCategories(initialCategories) as CategoryItem[]);
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>(initialCategories as CategoryItem[]);
+
+  // Load categories from Supabase on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const data = await getCategories();
+      if (data && data.length > 0) {
+        setCategoriesList(data as CategoryItem[]);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [formData, setFormData] = useState({
@@ -95,7 +107,7 @@ const AdminCategories = () => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       const updatedList = categoriesList.filter(cat => cat.id !== id);
       setCategoriesList(updatedList);
-      saveCategories(updatedList as CategoryConfig[]);
+      saveCategories(updatedList);
       toast.success('Category deleted successfully!');
     }
   };

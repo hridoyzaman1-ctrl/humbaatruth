@@ -7,6 +7,8 @@ DROP POLICY IF EXISTS "Users can view their own profile" ON authors;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON authors;
 DROP POLICY IF EXISTS "Admins can update all profiles" ON authors;
 DROP POLICY IF EXISTS "Users can update own profile" ON authors;
+DROP POLICY IF EXISTS "Super Admin can update everyone" ON authors;
+
 
 -- 2. Create SAFER Non-Recursive Policies
 
