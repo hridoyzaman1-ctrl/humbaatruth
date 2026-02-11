@@ -126,7 +126,9 @@ const AdminDashboard = () => {
                       {article.views.toLocaleString()}
                     </span>
                     <span>•</span>
-                    <span>{formatDistanceToNow(article.publishedAt, { addSuffix: true })}</span>
+                    <span>{article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
+                      ? formatDistanceToNow(article.publishedAt, { addSuffix: true })
+                      : 'Recently'}</span>
                   </div>
                 </div>
               </div>

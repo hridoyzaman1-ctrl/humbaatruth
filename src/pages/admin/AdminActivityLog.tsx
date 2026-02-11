@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { 
-  Activity, 
-  Search, 
-  Filter, 
-  Trash2, 
-  User, 
-  Clock, 
+import {
+  Activity,
+  Search,
+  Filter,
+  Trash2,
+  User,
+  Clock,
   FileText,
   Download,
   RefreshCw
@@ -32,13 +32,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { 
-  useActivityLog, 
-  formatAction, 
-  formatResource, 
+import {
+  useActivityLog,
+  formatAction,
+  formatResource,
   getActionColor,
   ActivityAction,
-  ActivityResource 
+  ActivityResource
 } from '@/context/ActivityLogContext';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -73,17 +73,17 @@ const AdminActivityLog = () => {
 
   // Filter logs
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
+    const matchesSearch =
       log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.resourceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       formatAction(log.action).toLowerCase().includes(searchQuery.toLowerCase()) ||
       formatResource(log.resource).toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesAction = actionFilter === 'all' || log.action === actionFilter;
     const matchesResource = resourceFilter === 'all' || log.resource === resourceFilter;
     const matchesUser = userFilter === 'all' || log.userName === userFilter;
-    
+
     return matchesSearch && matchesAction && matchesResource && matchesUser;
   });
 
@@ -109,7 +109,9 @@ const AdminActivityLog = () => {
     const csv = [
       ['Timestamp', 'User', 'Role', 'Action', 'Resource', 'Resource Name', 'Details'].join(','),
       ...filteredLogs.map(log => [
-        format(log.timestamp, 'yyyy-MM-dd HH:mm:ss'),
+        (log.timestamp instanceof Date && !isNaN(log.timestamp.getTime()))
+          ? format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')
+          : 'Unknown Time',
         log.userName,
         log.userRole,
         formatAction(log.action),
@@ -310,8 +312,10 @@ const AdminActivityLog = () => {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground self-end sm:self-center">
                     <Clock className="h-3 w-3" />
-                    <span title={format(log.timestamp, 'PPpp')}>
-                      {formatDistanceToNow(log.timestamp, { addSuffix: true })}
+                    <span title={(log.timestamp instanceof Date && !isNaN(log.timestamp.getTime())) ? format(log.timestamp, 'PPpp') : 'Invalid date'}>
+                      {(log.timestamp instanceof Date && !isNaN(log.timestamp.getTime()))
+                        ? formatDistanceToNow(log.timestamp, { addSuffix: true })
+                        : 'Recently'}
                     </span>
                   </div>
                 </div>

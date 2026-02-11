@@ -10,12 +10,12 @@ export const getArticles = async (): Promise<Article[]> => {
         `)
         .order('published_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching articles:', error);
-        return [];
-    }
-
-    return data as Article[];
+    return (data || []).map(article => ({
+        ...article,
+        publishedAt: new Date(article.published_at || article.publishedAt),
+        createdAt: new Date(article.created_at || article.createdAt),
+        updatedAt: new Date(article.updated_at || article.updatedAt)
+    })) as Article[];
 };
 
 export const saveArticles = async (articles: Article[]) => {
@@ -71,7 +71,12 @@ export const getArticleBySlug = async (slug: string): Promise<Article | null> =>
         .single();
 
     if (error) return null;
-    return data as Article;
+    return {
+        ...data,
+        publishedAt: new Date(data.published_at || data.publishedAt),
+        createdAt: new Date(data.created_at || data.createdAt),
+        updatedAt: new Date(data.updated_at || data.updatedAt)
+    } as Article;
 };
 
 export const incrementArticleViews = async (id: string) => {

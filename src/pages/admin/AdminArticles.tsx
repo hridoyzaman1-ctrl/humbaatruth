@@ -94,7 +94,8 @@ const AdminArticles = () => {
     isFeatured: false,
     status: 'draft' as ArticleStatus,
     publishedAt: undefined,
-    authorId: '1'
+    authorId: '1',
+    reviewNote: ''
   });
 
   // Permission checks
@@ -146,7 +147,7 @@ const AdminArticles = () => {
       isFeatured: false,
       status: 'draft',
       publishedAt: undefined,
-      reviewNote: undefined,
+      reviewNote: '',
       authorId: currentUser?.id || '1'
     });
     setIsDialogOpen(true);
@@ -179,6 +180,7 @@ const AdminArticles = () => {
       isFeatured: article.isFeatured,
       status: article.status,
       publishedAt: article.publishedAt,
+      reviewNote: article.reviewNote || '',
       authorId: article.author.id
     });
     setIsDialogOpen(true);
@@ -490,7 +492,9 @@ const AdminArticles = () => {
                       <div>
                         <span className="text-sm font-medium text-foreground line-clamp-1">{article.title}</span>
                         <span className="text-xs text-muted-foreground block">
-                          {format(article.publishedAt, 'MMM d, yyyy')}
+                          {article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
+                            ? format(article.publishedAt, 'MMM d, yyyy')
+                            : 'Unknown Date'}
                         </span>
                       </div>
                     </div>
@@ -588,7 +592,9 @@ const AdminArticles = () => {
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                   <span className="truncate">By {article.author.name}</span>
                   <span>•</span>
-                  <span>{format(article.publishedAt, 'MMM d, yyyy')}</span>
+                  <span>{article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
+                    ? format(article.publishedAt, 'MMM d, yyyy')
+                    : 'Unknown Date'}</span>
                 </div>
               </div>
             </div>

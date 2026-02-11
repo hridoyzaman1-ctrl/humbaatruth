@@ -104,7 +104,7 @@ const AdminLayout = () => {
     return null;
   }
 
-  const roleInfo = ROLE_DISPLAY[currentUser.role];
+  const roleInfo = currentUser ? (ROLE_DISPLAY[currentUser.role] || ROLE_DISPLAY['user']) : ROLE_DISPLAY['user'];
 
   return (
     <div className="flex min-h-screen bg-background">

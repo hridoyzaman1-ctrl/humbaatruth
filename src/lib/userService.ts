@@ -24,7 +24,13 @@ export const userService = {
 
                 // If found, return it (ensure active)
                 if (data) {
-                    return { ...data, isActive: true, role: 'admin', status: 'active', createdAt: new Date(data.created_at) } as ExtendedAdminUser;
+                    return {
+                        ...data,
+                        isActive: true,
+                        role: (data.role as AdminRole) || 'author',
+                        status: data.status || 'active',
+                        createdAt: data.created_at ? new Date(data.created_at) : new Date()
+                    } as ExtendedAdminUser;
                 }
 
                 // If NOT found, return Mock

@@ -194,7 +194,9 @@ const AdminUsers = () => {
                       <div className="text-xs text-muted-foreground">{user.email}</div>
                     </div>
                   </div>
-                  <Badge className={ROLE_DISPLAY[user.role]?.color}>{user.role}</Badge>
+                  <Badge className={(ROLE_DISPLAY[user.role] || ROLE_DISPLAY['user']).color}>
+                    {user.role}
+                  </Badge>
                 </div>
                 <div className="text-xs grid grid-cols-2 gap-2 mt-2 text-muted-foreground bg-muted/50 p-2 rounded">
                   <div>Age: <span className="text-foreground">{user.age || 'N/A'}</span></div>
@@ -256,7 +258,11 @@ const AdminUsers = () => {
                   <div className="text-sm grid grid-cols-2 gap-2 mt-2 bg-muted/50 p-2 rounded">
                     <div><span className="text-muted-foreground text-xs">Age:</span> {user.age}</div>
                     <div><span className="text-muted-foreground text-xs">Gender:</span> {user.gender}</div>
-                    <div className="col-span-2 text-xs text-muted-foreground">Requested: {format(user.createdAt, 'PP')}</div>
+                    <div className="col-span-2 text-xs text-muted-foreground">
+                      Requested: {user.createdAt instanceof Date && !isNaN(user.createdAt.getTime())
+                        ? format(user.createdAt, 'PP')
+                        : 'Unknown Date'}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mt-2">
