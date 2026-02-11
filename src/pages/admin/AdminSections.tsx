@@ -223,7 +223,10 @@ const AdminSections = () => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
-    const loadArticles = () => setArticlesList(getArticles());
+    const loadArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
     loadArticles();
 
     window.addEventListener('articlesUpdated', loadArticles);

@@ -20,7 +20,11 @@ const CategoryPage = () => {
   const categoryArticles = articlesList.filter(a => a.category === categoryId as Category);
 
   useEffect(() => {
-    setArticlesList(getArticles());
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
+    fetchArticles();
   }, []);
 
   const {

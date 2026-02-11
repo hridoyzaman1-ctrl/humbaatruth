@@ -24,7 +24,11 @@ export const SearchWithFilters = ({ onClose, isModal = false }: SearchWithFilter
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
-    setArticlesList(getArticles());
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
+    fetchArticles();
   }, []);
 
   const filteredArticles = useMemo(() => {

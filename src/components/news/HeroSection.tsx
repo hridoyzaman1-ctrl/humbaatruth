@@ -14,12 +14,25 @@ import { getFeaturedSettings } from '@/lib/settingsService';
 
 export const HeroSection = () => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
-  const [settings, setSettings] = useState(getFeaturedSettings());
+  const [settings, setSettings] = useState<any>({
+    breakingNewsIds: [],
+    heroFeaturedIds: [],
+    heroSideArticleIds: [],
+    maxBreakingNews: 5,
+    maxHeroArticles: 5,
+    breakingAutoSwipe: true,
+    autoSwipeInterval: 6000,
+    heroAutoSwipe: true
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchArticles = useCallback(() => {
-    setArticlesList(getArticles());
-    setSettings(getFeaturedSettings());
+  const fetchArticles = useCallback(async () => {
+    const data = await getArticles();
+    setArticlesList(data);
+    const featuredSettings = await getFeaturedSettings();
+    if (featuredSettings) {
+      setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+    }
   }, []);
 
   // Load data and listen for updates
@@ -40,7 +53,7 @@ export const HeroSection = () => {
   }, [fetchArticles]);
 
   // Order articles based on settings.heroFeaturedIds
-  const featuredArticles = settings.heroFeaturedIds
+  const featuredArticles = (settings.heroFeaturedIds || [])
     .map(id => articlesList.find(a => a.id === id))
     .filter((a): a is Article => !!a); // Filter out undefined if an article was deleted
 

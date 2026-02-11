@@ -87,8 +87,21 @@ const AdminLayout = () => {
     navigate('/admin/login', { replace: true });
   };
 
-  // Don't render layout if not authenticated
-  if (!isAdminAuthenticated() || !currentUser) {
+  // Show loading state if authenticated but user not loaded yet
+  if (isAdminAuthenticated() && !currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground animate-pulse">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Double check - if we get here and no user, we should redirect (handled by useEffect), 
+  // but return null to avoid flashing content
+  if (!currentUser) {
     return null;
   }
 

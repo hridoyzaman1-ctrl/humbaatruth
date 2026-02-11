@@ -17,8 +17,9 @@ import { Article } from '@/types/news';
 const Index = () => {
   const [currentArticles, setCurrentArticles] = useState<Article[]>([]);
 
-  const fetchArticles = () => {
-    setCurrentArticles(getArticles());
+  const fetchArticles = async () => {
+    const data = await getArticles();
+    setCurrentArticles(data);
   };
 
   useEffect(() => {

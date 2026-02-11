@@ -65,7 +65,11 @@ const SearchPage = () => {
 
   // Load articles
   useEffect(() => {
-    setArticlesList(getArticles());
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
+    fetchArticles();
   }, []);
 
   // Simulate loading state on filter changes

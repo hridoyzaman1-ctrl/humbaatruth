@@ -17,11 +17,24 @@ export const BreakingNewsTicker = ({
   autoSwipeInterval: propInterval
 }: BreakingNewsTickerProps) => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
-  const [settings, setSettings] = useState(getFeaturedSettings());
+  const [settings, setSettings] = useState<any>({
+    breakingNewsIds: [],
+    heroFeaturedIds: [],
+    heroSideArticleIds: [],
+    maxBreakingNews: 5,
+    maxHeroArticles: 5,
+    breakingAutoSwipe: true,
+    autoSwipeInterval: 5000,
+    heroAutoSwipe: true
+  });
 
-  const fetchData = useCallback(() => {
-    setArticlesList(getArticles());
-    setSettings(getFeaturedSettings());
+  const fetchData = useCallback(async () => {
+    const articles = await getArticles();
+    setArticlesList(articles);
+    const featuredSettings = await getFeaturedSettings();
+    if (featuredSettings) {
+      setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+    }
   }, []);
 
   useEffect(() => {
@@ -35,7 +48,7 @@ export const BreakingNewsTicker = ({
   }, [fetchData]);
 
   // Use settings for breaking news IDs
-  const breakingNews = settings.breakingNewsIds
+  const breakingNews = (settings.breakingNewsIds || [])
     .map(id => articlesList.find(a => a.id === id))
     .filter((a): a is Article => !!a)
     .slice(0, maxHeadlines);

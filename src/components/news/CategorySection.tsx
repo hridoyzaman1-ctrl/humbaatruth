@@ -16,10 +16,15 @@ export const CategorySection = ({ category, title, showMore = true }: CategorySe
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
-    setArticlesList(getArticles());
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
+
+    fetchArticles();
 
     // Listen for updates
-    const handleUpdate = () => setArticlesList(getArticles());
+    const handleUpdate = () => fetchArticles();
     window.addEventListener('articlesUpdated', handleUpdate);
     return () => window.removeEventListener('articlesUpdated', handleUpdate);
   }, []);

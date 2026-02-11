@@ -50,8 +50,17 @@ const recentComments = [
 ];
 
 export const HomepageComments = () => {
+  const [articles, setArticles] = useState<import('@/types/news').Article[]>([]);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticles(data);
+    };
+    fetchArticles();
+  }, []);
+
   const getArticleSlug = (articleId: string) => {
-    const articles = getArticles();
     const article = articles.find(a => a.id === articleId);
     return article?.slug || '';
   };

@@ -21,11 +21,22 @@ const ArticlePage = () => {
     }
   }, [article?.id]);
 
-  // getArticles() returns the full list from storage/mock
-  const allArticles = getArticles();
-  const relatedArticles = allArticles
-    .filter(a => a.category === article?.category && a.id !== article?.id)
-    .slice(0, 3);
+  // Load related articles
+  const [relatedArticles, setRelatedArticles] = useState<import('@/types/news').Article[]>([]);
+
+  useEffect(() => {
+    const fetchRelated = async () => {
+      const allArticles = await getArticles();
+      const related = allArticles
+        .filter(a => a.category === article?.category && a.id !== article?.id)
+        .slice(0, 3);
+      setRelatedArticles(related);
+    };
+
+    if (article) {
+      fetchRelated();
+    }
+  }, [article]);
 
   if (!article) {
     return (

@@ -115,11 +115,45 @@ CREATE POLICY "Allow authenticated manage" ON jobs FOR ALL USING (auth.role() = 
 CREATE POLICY "Allow authenticated manage" ON site_settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated manage" ON activity_log FOR ALL USING (auth.role() = 'authenticated');
 
--- 8. Seed Demo Authors
+-- 8. Seed Demo Authors (Optional, if using manual insert)
 INSERT INTO authors (name, email, avatar, role)
 VALUES 
     ('System Admin', 'admin@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', 'admin'),
-    ('News Editor', 'editor@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=editor', 'editor'),
-    ('Senior Author', 'author@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=author', 'author'),
-    ('Lead Journalist', 'journalist@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=journalist', 'journalist')
+    ('News Editor', 'editor@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=editor', 'editor')
 ON CONFLICT (email) DO NOTHING;
+
+-- 9. AUTOMATION: Trigger to create Author profile on Sign Up
+-- This ensures that when a user creates an account in Supabase Auth,
+-- a corresponding profile is created in the 'authors' table instantly.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.authors (id, email, name, role, avatar)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'name', 'New User'),
+    COALESCE(new.raw_user_meta_data->>'role', 'reporter'),
+    COALESCE(new.raw_user_meta_data->>'avatar', 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id)
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email; -- ensuring email sync
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop trigger if exists to allow safe upgrades
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 10. Refined RLS Policies for Authors
+-- Ensure users can update their own profile
+DROP POLICY IF EXISTS "Allow authenticated manage" ON authors;
+CREATE POLICY "Allow individual update own profile" ON authors FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Allow admins to manage all" ON authors FOR ALL USING (
+  exists (select 1 from authors where id = auth.uid() and role = 'admin')
+);
+CREATE POLICY "Allow public read access" ON authors FOR SELECT USING (true);

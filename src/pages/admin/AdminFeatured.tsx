@@ -157,7 +157,10 @@ const AdminFeatured = () => {
   const [heroSideArticleIds, setHeroSideArticleIds] = useState<string[]>(settings.heroSideArticleIds || []);
 
   useEffect(() => {
-    const loadArticles = () => setArticlesList(getArticles());
+    const loadArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
     loadArticles();
 
     window.addEventListener('articlesUpdated', loadArticles);

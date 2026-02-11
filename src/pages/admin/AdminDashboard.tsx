@@ -21,7 +21,11 @@ const AdminDashboard = () => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
-    setArticlesList(getArticles());
+    const fetchArticles = async () => {
+      const data = await getArticles();
+      setArticlesList(data);
+    };
+    fetchArticles();
   }, []);
 
   // Mock pending articles count (or derived if we had status persistence for everyone)
