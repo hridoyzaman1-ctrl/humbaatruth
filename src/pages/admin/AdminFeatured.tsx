@@ -151,20 +151,42 @@ const DragOverlayItem = ({ article, showImage, getCategoryColor }: {
 
 const AdminFeatured = () => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
-  const [settings, setSettings] = useState<FeaturedSettings>(getFeaturedSettings());
-  const [breakingNewsIds, setBreakingNewsIds] = useState<string[]>(settings.breakingNewsIds);
-  const [heroFeaturedIds, setHeroFeaturedIds] = useState<string[]>(settings.heroFeaturedIds);
-  const [heroSideArticleIds, setHeroSideArticleIds] = useState<string[]>(settings.heroSideArticleIds || []);
+  const [settings, setSettings] = useState<FeaturedSettings>({
+    breakingNewsIds: [],
+    heroFeaturedIds: [],
+    heroSideArticleIds: [],
+    maxBreakingNews: 5,
+    maxHeroArticles: 5,
+    breakingAutoSwipe: true,
+    autoSwipeInterval: 5000,
+    heroAutoSwipe: true
+  });
+  const [breakingNewsIds, setBreakingNewsIds] = useState<string[]>([]);
+  const [heroFeaturedIds, setHeroFeaturedIds] = useState<string[]>([]);
+  const [heroSideArticleIds, setHeroSideArticleIds] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadArticles = async () => {
-      const data = await getArticles();
-      setArticlesList(data);
-    };
-    loadArticles();
+    const loadData = async () => {
+      const [articles, fetchedSettings] = await Promise.all([
+        getArticles(),
+        getFeaturedSettings()
+      ]);
 
-    window.addEventListener('articlesUpdated', loadArticles);
-    return () => window.removeEventListener('articlesUpdated', loadArticles);
+      setArticlesList(articles);
+
+      if (fetchedSettings) {
+        setSettings(fetchedSettings);
+        setBreakingNewsIds(fetchedSettings.breakingNewsIds || []);
+        setHeroFeaturedIds(fetchedSettings.heroFeaturedIds || []);
+        setHeroSideArticleIds(fetchedSettings.heroSideArticleIds || []);
+      }
+    };
+    loadData();
+
+    window.addEventListener('articlesUpdated', () => {
+      getArticles().then(setArticlesList);
+    });
+    return () => window.removeEventListener('articlesUpdated', () => { });
   }, []);
 
   // Allow all articles (drafts, scheduled, published) to be featured, except rejected ones

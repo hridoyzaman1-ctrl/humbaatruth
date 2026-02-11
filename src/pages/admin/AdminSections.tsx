@@ -218,19 +218,25 @@ const SectionDragOverlay = ({ section }: { section: SectionConfig }) => (
 );
 
 const AdminSections = () => {
-  const [sections, setSections] = useState<SectionConfig[]>(getSectionsSettings(defaultSections));
+  const [sections, setSections] = useState<SectionConfig[]>(defaultSections);
   const [activeTab, setActiveTab] = useState('overview');
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
-    const loadArticles = async () => {
-      const data = await getArticles();
+    const loadData = async () => {
+      const [data, savedSections] = await Promise.all([
+        getArticles(),
+        getSectionsSettings(defaultSections)
+      ]);
       setArticlesList(data);
+      setSections(savedSections);
     };
-    loadArticles();
+    loadData();
 
-    window.addEventListener('articlesUpdated', loadArticles);
-    return () => window.removeEventListener('articlesUpdated', loadArticles);
+    window.addEventListener('articlesUpdated', () => {
+      getArticles().then(setArticlesList);
+    });
+    return () => window.removeEventListener('articlesUpdated', () => { });
   }, []);
 
   // Allow all articles except rejected

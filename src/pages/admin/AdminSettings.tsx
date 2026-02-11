@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,8 +22,34 @@ import { getSiteSettings, saveSiteSettings, getSocialLinks, saveSocialLinks, Sit
 
 const AdminSettings = () => {
   const { hasPermission } = useAdminAuth();
-  const [socialLinks, setSocialLinks] = useState<SocialMediaLink[]>(getSocialLinks(initialSocialLinks) as SocialMediaLink[]);
-  const [settings, setSettings] = useState<SiteSettingsConfig>(getSiteSettings());
+  const [socialLinks, setSocialLinks] = useState<SocialMediaLink[]>(initialSocialLinks as SocialMediaLink[]);
+  const [settings, setSettings] = useState<SiteSettingsConfig>({
+    siteName: 'TruthLens',
+    tagline: 'Truth Unveiled',
+    siteDescription: 'An elegant news platform.',
+    contactEmail: 'contact@truthlens.com',
+    enableComments: true,
+    moderateComments: false,
+    enableNewsletter: true,
+    articlesPerPage: '10',
+    defaultCategory: 'national',
+    timezone: 'UTC',
+    dateFormat: 'MMM d, yyyy',
+    maintenanceMode: false
+  });
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [fetchedSocials, fetchedSettings] = await Promise.all([
+        getSocialLinks(initialSocialLinks),
+        getSiteSettings()
+      ]);
+
+      if (fetchedSocials) setSocialLinks(fetchedSocials as SocialMediaLink[]);
+      if (fetchedSettings) setSettings(fetchedSettings);
+    };
+    loadData();
+  }, []);
 
   const canManageSettings = hasPermission('manageSettings');
 

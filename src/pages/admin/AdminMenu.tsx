@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Menu, Plus, Trash2, Eye, EyeOff, ExternalLink, Folder, FileText, LayoutDashboard, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,15 @@ import { toast } from 'sonner';
 import { getMenuSettings, saveMenuSettings } from '@/lib/settingsService';
 
 const AdminMenu = () => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(getMenuSettings(initialMenuItems));
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const savedMenu = await getMenuSettings(initialMenuItems);
+      setMenuItems(savedMenu);
+    };
+    loadSettings();
+  }, []);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({
     label: '',
