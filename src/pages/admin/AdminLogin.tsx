@@ -96,46 +96,51 @@ const AdminLogin = () => {
     e.preventDefault();
     setError('');
 
-    // Check rate limiting
-    if (rateLimiter.isLocked) {
-      setError(`Too many failed attempts. Please try again in ${rateLimiter.formatRemainingTime()}.`);
-      return;
-    }
-
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Attempt login
-    const success = await login(email, password, rememberMe);
-
-    if (success) {
-      rateLimiter.recordAttempt(true);
-      // Log activity after successful login
-      setTimeout(() => {
-        logActivity('login', 'session', {
-          details: `Logged in from ${navigator.userAgent.includes('Mobile') ? 'mobile' : 'desktop'} device`
-        });
-      }, 100);
-      toast.success('Welcome back!');
-
-      // Redirect to intended page or admin dashboard
-      const from = (location.state as { from?: string })?.from || '/admin';
-      navigate(from, { replace: true });
-    } else {
-      rateLimiter.recordAttempt(false);
-
-      if (rateLimiter.attemptsRemaining <= 1) {
-        setError(`Invalid credentials. ${rateLimiter.attemptsRemaining} attempt${rateLimiter.attemptsRemaining === 1 ? '' : 's'} remaining before lockout.`);
-      } else {
-        setError('Invalid email or password. Please try again.');
+    try {
+      // Check rate limiting
+      if (rateLimiter.isLocked) {
+        setError(`Too many failed attempts. Please try again in ${rateLimiter.formatRemainingTime()}.`);
+        return;
       }
-    }
 
-    setIsLoading(false);
+      if (!validateForm()) return;
+
+      setIsLoading(true);
+
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Attempt login
+      const success = await login(email, password, rememberMe);
+
+      if (success) {
+        rateLimiter.recordAttempt(true);
+        // Log activity after successful login
+        setTimeout(() => {
+          logActivity('login', 'session', {
+            details: `Logged in from ${navigator.userAgent.includes('Mobile') ? 'mobile' : 'desktop'} device`
+          });
+        }, 100);
+        toast.success('Welcome back!');
+
+        // Redirect to intended page or admin dashboard
+        const from = (location.state as { from?: string })?.from || '/admin';
+        navigate(from, { replace: true });
+      } else {
+        rateLimiter.recordAttempt(false);
+
+        if (rateLimiter.attemptsRemaining <= 1) {
+          setError(`Invalid credentials. ${rateLimiter.attemptsRemaining} attempt${rateLimiter.attemptsRemaining === 1 ? '' : 's'} remaining before lockout.`);
+        } else {
+          setError('Invalid email or password. Please try again.');
+        }
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('A connection error occurred. Please check your internet and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePasswordReset = async (e: React.FormEvent) => {
@@ -174,10 +179,20 @@ const AdminLogin = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative"
       >
         <Card className="border-border shadow-xl">
-          <CardHeader className="text-center space-y-4">
+          <CardHeader className="text-center space-y-4 pt-8 relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 left-2 text-muted-foreground hover:text-foreground transition-colors group px-2 h-8"
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+              <span className="text-xs">Back</span>
+            </Button>
+
             <div className="flex justify-center">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Shield className="h-8 w-8 text-primary" />
@@ -463,7 +478,7 @@ const AdminLogin = () => {
           <a href="/privacy" className="hover:underline ml-1">Privacy Policy</a>
         </p>
       </motion.div>
-    </div>
+    </div >
   );
 };
 

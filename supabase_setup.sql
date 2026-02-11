@@ -114,3 +114,12 @@ CREATE POLICY "Allow authenticated manage" ON articles FOR ALL USING (auth.role(
 CREATE POLICY "Allow authenticated manage" ON jobs FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated manage" ON site_settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated manage" ON activity_log FOR ALL USING (auth.role() = 'authenticated');
+
+-- 8. Seed Demo Authors
+INSERT INTO authors (name, email, avatar, role)
+VALUES 
+    ('System Admin', 'admin@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', 'admin'),
+    ('News Editor', 'editor@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=editor', 'editor'),
+    ('Senior Author', 'author@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=author', 'author'),
+    ('Lead Journalist', 'journalist@truthlens.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=journalist', 'journalist')
+ON CONFLICT (email) DO NOTHING;

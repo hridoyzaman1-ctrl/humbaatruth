@@ -25,18 +25,9 @@ export const userService = {
     },
 
     authenticate: async (email: string, password: string): Promise<ExtendedAdminUser | null> => {
-        // Note: For a commercial app, use Supabase Auth.
-        // This is a bridge using the authors table.
-        const { data, error } = await supabase
-            .from('authors')
-            .select('*')
-            .eq('email', email.toLowerCase())
-            .single();
+        const lowerEmail = email.toLowerCase();
 
-        if (error || !data) return null;
-
-        // In the mock app, passwords aren't stored in Supabase yet.
-        // We'll assume the same mock passwords for now if the user hasn't set up Supabase Auth.
+        // Mock passwords for demo accounts
         const mockPasswords: Record<string, string> = {
             'admin@truthlens.com': 'admin123',
             'editor@truthlens.com': 'editor123',
@@ -44,15 +35,62 @@ export const userService = {
             'journalist@truthlens.com': 'journalist123'
         };
 
-        if (mockPasswords[email.toLowerCase()] === password) {
-            return {
-                ...data,
-                isActive: true,
-                createdAt: new Date(data.created_at)
-            } as ExtendedAdminUser;
-        }
+        try {
+            // First check Supabase
+            const { data, error } = await supabase
+                .from('authors')
+                .select('*')
+                .eq('email', lowerEmail)
+                .maybeSingle();
 
-        return null;
+            if (data) {
+                if (mockPasswords[lowerEmail] === password) {
+                    return {
+                        ...data,
+                        isActive: true,
+                        createdAt: new Date(data.created_at)
+                    } as ExtendedAdminUser;
+                }
+                return null;
+            }
+
+            // Fallback: If DB query returns nothing, check if it's a demo account
+            if (mockPasswords[lowerEmail] === password) {
+                console.log('Using demo fallback for:', lowerEmail);
+                const demoUsers: Record<string, any> = {
+                    'admin@truthlens.com': { id: 'demo-admin', name: 'System Admin', role: 'admin', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin' },
+                    'editor@truthlens.com': { id: 'demo-editor', name: 'News Editor', role: 'editor', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=editor' },
+                    'author@truthlens.com': { id: 'demo-author', name: 'Senior Author', role: 'author', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=author' },
+                    'journalist@truthlens.com': { id: 'demo-journalist', name: 'Lead Journalist', role: 'journalist', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=journalist' }
+                };
+
+                const demoInfo = demoUsers[lowerEmail];
+                if (demoInfo) {
+                    return {
+                        ...demoInfo,
+                        email: lowerEmail,
+                        isActive: true,
+                        createdAt: new Date()
+                    } as ExtendedAdminUser;
+                }
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Authentication exception:', error);
+            // Even on error, allow demo accounts if password matches
+            if (mockPasswords[lowerEmail] === password) {
+                return {
+                    id: 'error-fallback',
+                    name: 'Demo User',
+                    role: 'admin',
+                    email: lowerEmail,
+                    isActive: true,
+                    createdAt: new Date()
+                } as ExtendedAdminUser;
+            }
+            return null;
+        }
     },
 
     updateProfile: async (userId: string, updates: Partial<ExtendedAdminUser>) => {
