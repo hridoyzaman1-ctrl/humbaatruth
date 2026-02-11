@@ -9,6 +9,7 @@ export type { ExtendedAdminUser };
 interface AdminAuthContextType {
   currentUser: ExtendedAdminUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: keyof RolePermissions) => boolean;
@@ -18,8 +19,6 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-// Path to permission mapping could stay, or we can clear it if requested. 
-// Keeping it for now as it's UI logic, not "Auth Data".
 const PATH_PERMISSIONS: Record<string, keyof RolePermissions | 'always'> = {
   '/admin': 'always',
   '/admin/featured': 'manageFeatured',
@@ -39,33 +38,43 @@ const PATH_PERMISSIONS: Record<string, keyof RolePermissions | 'always'> = {
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<ExtendedAdminUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const initAuth = useCallback(async (sessionUserEmail: string | undefined) => {
+    if (!sessionUserEmail) {
+      setCurrentUser(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const user = await userService.authenticate(sessionUserEmail);
+      setCurrentUser(user);
+    } catch (error) {
+      console.error("Auth init error:", error);
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Check active session
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) {
-        userService.authenticate(session.user.email).then(user => {
-          if (user) setCurrentUser(user);
-        });
-      }
+      initAuth(session?.user?.email);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email) {
-        userService.authenticate(session.user.email).then(user => {
-          if (user) setCurrentUser(user);
-        });
-      } else {
-        setCurrentUser(null);
-      }
+      initAuth(session?.user?.email);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initAuth]);
 
   const login = useCallback(async (email: string, password: string, rememberMe = false): Promise<boolean> => {
+    setIsLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -73,18 +82,21 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (error) {
       console.error("Login Result: Error", error.message);
+      setIsLoading(false);
       return false;
     }
 
-    // The onAuthStateChange will handle state update
+    // onAuthStateChange handles state
     return true;
   }, []);
 
   const logout = useCallback(async () => {
+    setIsLoading(true);
     await supabase.auth.signOut();
     setCurrentUser(null);
     localStorage.removeItem('adminUser');
     sessionStorage.removeItem('adminUser');
+    setIsLoading(false);
   }, []);
 
   const checkPermission = useCallback((permission: keyof RolePermissions): boolean => {
@@ -110,6 +122,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         currentUser,
         isAuthenticated: !!currentUser,
+        isLoading,
         login,
         logout,
         hasPermission: checkPermission,
@@ -132,9 +145,8 @@ export const useAdminAuth = (): AdminAuthContextType => {
 
 // Export for backward compatibility 
 export const isAdminAuthenticated = (): boolean => {
-  // This is tricky without hook, but we can check checking local storage as a hint?
-  // Or just remove this usage from Layout if we can.
-  return true; // Weak check, relies on Context for real security
+  const adminUser = localStorage.getItem('supabase.auth.token') || sessionStorage.getItem('supabase.auth.token');
+  return !!adminUser;
 };
 
 export const adminLogout = (): void => {

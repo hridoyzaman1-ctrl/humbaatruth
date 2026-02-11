@@ -52,7 +52,7 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout, hasPermission, canAccessPath } = useAdminAuth();
+  const { currentUser, isLoading, logout, hasPermission, canAccessPath } = useAdminAuth();
 
   // Filter nav items based on user permissions
   const navItems = allNavItems.filter(item => {
@@ -62,17 +62,17 @@ const AdminLayout = () => {
 
   // Check authentication on mount and route changes
   useEffect(() => {
-    if (!isAdminAuthenticated()) {
+    if (!isLoading && !currentUser) {
       navigate('/admin/login', { state: { from: location.pathname }, replace: true });
       return;
     }
 
     // Check if user can access current path
-    if (currentUser && !canAccessPath(location.pathname)) {
+    if (!isLoading && currentUser && !canAccessPath(location.pathname)) {
       toast.error('You do not have permission to access this page');
       navigate('/admin', { replace: true });
     }
-  }, [location.pathname, navigate, currentUser, canAccessPath]);
+  }, [location.pathname, navigate, currentUser, canAccessPath, isLoading]);
 
   // Close sidebar when route changes on mobile
   const handleNavClick = () => {
@@ -87,8 +87,8 @@ const AdminLayout = () => {
     navigate('/admin/login', { replace: true });
   };
 
-  // Show loading state if authenticated but user not loaded yet
-  if (isAdminAuthenticated() && !currentUser) {
+  // Show loading state while checking session
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -99,8 +99,7 @@ const AdminLayout = () => {
     );
   }
 
-  // Double check - if we get here and no user, we should redirect (handled by useEffect), 
-  // but return null to avoid flashing content
+  // Final check to prevent flashing protected content
   if (!currentUser) {
     return null;
   }
