@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/davalaxy/public_html/truthlens.com
+    - /bin/cp -R dist/* $DEPLOYPATH
