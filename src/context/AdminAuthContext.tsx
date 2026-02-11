@@ -55,22 +55,29 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.email) {
         const email = session.user.email;
+        const isSuperAdmin = email.toLowerCase() === 'hridoyzaman1@gmail.com';
+
+        // 1. IMPROVED FALLBACK: Set Super Admin State IMMEDIATELY (Don't wait for DB)
+        if (isSuperAdmin) {
+          console.log("Instant Access for Super Admin");
+          setCurrentUser({
+            id: session.user.id,
+            email: email,
+            name: 'Hridoy Zaman',
+            role: 'admin',
+            isActive: true,
+            status: 'active',
+            createdAt: new Date(),
+            avatar: ''
+          } as ExtendedAdminUser);
+        }
+
+        // 2. Fetch DB Profile (Background update)
         userService.authenticate(email).then(user => {
           if (user) {
             setCurrentUser(user);
-          } else if (email.toLowerCase() === 'hridoyzaman1@gmail.com') {
-            // FALLBACK: If DB profile is missing but Auth is valid, and it's SUPER ADMIN
-            console.warn("Using Emergency Hardcoded Profile for Super Admin");
-            setCurrentUser({
-              id: session.user.id,
-              email: email,
-              name: 'Hridoy Zaman',
-              role: 'admin',
-              isActive: true,
-              status: 'active',
-              createdAt: new Date(),
-              avatar: ''
-            } as ExtendedAdminUser);
+          } else if (!isSuperAdmin) {
+            // For normal users, if no profile, we do nothing (remains null or requires handling)
           }
         });
       } else {
