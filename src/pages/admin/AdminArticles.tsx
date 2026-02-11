@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { categories, authors } from '@/data/mockData'; // Keep categories/authors static for now
-import { getArticles, saveArticles } from '@/lib/articleService';
+import { categories, authors } from '@/data/mockData';
+import { getArticles, upsertArticle, deleteArticle } from '@/lib/articleService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -45,22 +45,32 @@ const AdminArticles = () => {
 
   // Load articles from service
   const [articlesList, setArticlesList] = useState<ExtendedArticle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchArticles = async () => {
+    setIsLoading(true);
+    try {
+      const loadedArticles = await getArticles();
+      setArticlesList(loadedArticles.map(a => ({
+        ...a,
+        status: (a.status as ArticleStatus) || 'published', // ensure status exists
+        submittedBy: a.author.id // fallback
+      })));
+    } catch (error) {
+      toast.error('Failed to load articles');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadedArticles = getArticles();
-    setArticlesList(loadedArticles.map(a => ({
-      ...a,
-      status: (a.status as ArticleStatus) || 'published', // ensure status exists
-      submittedBy: a.author.id // fallback
-    })));
+    fetchArticles();
   }, []);
 
-  // Save changes whenever list updates
+  // Save changes via upsert instead of bulk save
   const updateArticlesList = (newList: ExtendedArticle[]) => {
     setArticlesList(newList);
-    // Convert ExtendedArticle back to Article for storage
-    // We treat 'status' as string in the base type, so it fits
-    saveArticles(newList as unknown as Article[]);
+    // saveArticles(newList as unknown as Article[]); // deprecated
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,6 +93,7 @@ const AdminArticles = () => {
     isBreaking: false,
     isFeatured: false,
     status: 'draft' as ArticleStatus,
+    publishedAt: undefined,
     authorId: '1'
   });
 
@@ -134,6 +145,8 @@ const AdminArticles = () => {
       isBreaking: false,
       isFeatured: false,
       status: 'draft',
+      publishedAt: undefined,
+      reviewNote: undefined,
       authorId: currentUser?.id || '1'
     });
     setIsDialogOpen(true);
@@ -165,6 +178,7 @@ const AdminArticles = () => {
       isBreaking: article.isBreaking,
       isFeatured: article.isFeatured,
       status: article.status,
+      publishedAt: article.publishedAt,
       authorId: article.author.id
     });
     setIsDialogOpen(true);
@@ -194,47 +208,14 @@ const AdminArticles = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const author = authors.find(a => a.id === formData.authorId) || authors[0];
     const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
 
-    let updatedList = [...articlesList];
-
-    if (editingArticle) {
-      // Update existing article
-      updatedList = updatedList.map(a =>
-        a.id === editingArticle.id
-          ? {
-            ...a,
-            title: formData.title,
-            slug: formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            excerpt: formData.excerpt,
-            content: formData.content,
-            category: formData.category,
-            author,
-            featuredImage: formData.featuredImage,
-            videoUrl: formData.videoUrl || undefined,
-            hasVideo: !!formData.videoUrl,
-            tags: tagsArray,
-            isBreaking: canSetBreaking ? formData.isBreaking : a.isBreaking,
-            isFeatured: canSetFeatured ? formData.isFeatured : a.isFeatured,
-            status: formData.status,
-            updatedAt: new Date()
-          }
-          : a
-      );
-
-      logActivity('update', 'article', {
-        resourceId: editingArticle.id,
-        resourceName: formData.title,
-        details: 'Updated article content'
-      });
-      toast.success('Article updated successfully!');
-    } else {
-      // Create new article
-      const newArticle: ExtendedArticle = {
-        id: Date.now().toString(),
+    try {
+      const articleData: Partial<ExtendedArticle> = {
+        id: editingArticle?.id,
         title: formData.title,
         slug: formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         excerpt: formData.excerpt,
@@ -245,101 +226,105 @@ const AdminArticles = () => {
         videoUrl: formData.videoUrl || undefined,
         hasVideo: !!formData.videoUrl,
         tags: tagsArray,
-        isBreaking: canSetBreaking ? formData.isBreaking : false,
-        isFeatured: canSetFeatured ? formData.isFeatured : false,
+        isBreaking: canSetBreaking ? formData.isBreaking : (editingArticle?.isBreaking || false),
+        isFeatured: canSetFeatured ? formData.isFeatured : (editingArticle?.isFeatured || false),
         status: formData.status,
-        publishedAt: formData.status === 'published' ? new Date() : new Date(),
-        createdAt: new Date(),
         updatedAt: new Date(),
-        views: 0,
-        submittedBy: currentUser?.id
+        submittedBy: editingArticle?.submittedBy || currentUser?.id
       };
 
-      updatedList = [newArticle, ...updatedList];
+      await upsertArticle(articleData as Article);
 
-      logActivity('create', 'article', {
-        resourceId: newArticle.id,
+      logActivity(editingArticle ? 'update' : 'create', 'article', {
+        resourceId: editingArticle?.id || 'new',
         resourceName: formData.title,
-        details: `Created new article in ${formData.category} category`
+        details: editingArticle ? 'Updated article content' : `Created new article in ${formData.category} category`
       });
-      toast.success('Article created successfully!');
+
+      toast.success(editingArticle ? 'Article updated successfully!' : 'Article created successfully!');
+      fetchArticles(); // Refresh from DB
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error('Failed to save article');
     }
-
-    updateArticlesList(updatedList);
-    setIsDialogOpen(false);
   };
 
-  const handleSubmitForReview = (article: ExtendedArticle) => {
-    const updatedList = articlesList.map(a =>
-      a.id === article.id
-        ? { ...a, status: 'pending_review' as ArticleStatus, updatedAt: new Date() }
-        : a
-    );
-    updateArticlesList(updatedList);
+  const handleSubmitForReview = async (article: ExtendedArticle) => {
+    try {
+      await upsertArticle({
+        ...article,
+        status: 'pending_review',
+        updatedAt: new Date()
+      } as Article);
 
-    logActivity('submit_review', 'article', {
-      resourceId: article.id,
-      resourceName: article.title,
-      details: 'Submitted article for editorial review'
-    });
-    toast.success('Article submitted for review!');
+      logActivity('submit_review', 'article', {
+        resourceId: article.id,
+        resourceName: article.title,
+        details: 'Submitted article for editorial review'
+      });
+      toast.success('Article submitted for review!');
+      fetchArticles();
+    } catch (error) {
+      toast.error('Failed to submit for review');
+    }
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!reviewingArticle) return;
 
-    const updatedList = articlesList.map(a =>
-      a.id === reviewingArticle.id
-        ? {
-          ...a,
-          status: 'published' as ArticleStatus,
-          publishedAt: new Date(),
-          reviewedBy: currentUser?.id,
-          reviewNote: reviewNote || undefined,
-          updatedAt: new Date()
-        }
-        : a
-    );
-    updateArticlesList(updatedList);
+    try {
+      await upsertArticle({
+        ...reviewingArticle,
+        status: 'published',
+        publishedAt: new Date(),
+        reviewedBy: currentUser?.id,
+        reviewNote: reviewNote || undefined,
+        updatedAt: new Date()
+      } as Article);
 
-    logActivity('approve', 'article', {
-      resourceId: reviewingArticle.id,
-      resourceName: reviewingArticle.title,
-      details: reviewNote ? `Approved with note: ${reviewNote}` : 'Approved and published'
-    });
-    setIsReviewDialogOpen(false);
-    toast.success('Article approved and published!');
+      logActivity('approve', 'article', {
+        resourceId: reviewingArticle.id,
+        resourceName: reviewingArticle.title,
+        details: reviewNote ? `Approved with note: ${reviewNote}` : 'Approved and published'
+      });
+      setIsReviewDialogOpen(false);
+      toast.success('Article approved and published!');
+      fetchArticles();
+    } catch (error) {
+      toast.error('Failed to approve article');
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!reviewingArticle || !reviewNote.trim()) {
       toast.error('Please provide a reason for rejection');
       return;
     }
 
-    const updatedList = articlesList.map(a =>
-      a.id === reviewingArticle.id
-        ? {
-          ...a,
-          status: 'rejected' as ArticleStatus,
-          reviewedBy: currentUser?.id,
-          reviewNote: reviewNote,
-          updatedAt: new Date()
-        }
-        : a
-    );
-    updateArticlesList(updatedList);
+    try {
+      await upsertArticle({
+        ...reviewingArticle,
+        status: 'rejected',
+        reviewedBy: currentUser?.id,
+        reviewNote: reviewNote,
+        updatedAt: new Date()
+      } as Article);
 
-    logActivity('reject', 'article', {
-      resourceId: reviewingArticle.id,
-      resourceName: reviewingArticle.title,
-      details: `Rejected: ${reviewNote}`
-    });
-    setIsReviewDialogOpen(false);
-    toast.success('Article rejected');
+      logActivity('reject', 'article', {
+        resourceId: reviewingArticle.id,
+        resourceName: reviewingArticle.title,
+        details: `Rejected: ${reviewNote}`
+      });
+      setIsReviewDialogOpen(false);
+      toast.success('Article rejected');
+      fetchArticles();
+    } catch (error) {
+      toast.error('Failed to reject article');
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const article = articlesList.find(a => a.id === id);
     if (!article) return;
 
@@ -350,15 +335,18 @@ const AdminArticles = () => {
     }
 
     if (window.confirm('Are you sure you want to delete this article?')) {
-      const updatedList = articlesList.filter(a => a.id !== id);
-      updateArticlesList(updatedList);
-
-      logActivity('delete', 'article', {
-        resourceId: id,
-        resourceName: article.title,
-        details: 'Permanently deleted article'
-      });
-      toast.success('Article deleted successfully!');
+      try {
+        await deleteArticle(id);
+        logActivity('delete', 'article', {
+          resourceId: id,
+          resourceName: article.title,
+          details: 'Permanently deleted article'
+        });
+        toast.success('Article deleted successfully!');
+        fetchArticles();
+      } catch (error) {
+        toast.error('Failed to delete article');
+      }
     }
   };
 

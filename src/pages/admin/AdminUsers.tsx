@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Shield, ShieldCheck, ShieldAlert, UserCheck, UserX, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { adminUsers, rolePermissions } from '@/data/adminMockData';
-import { AdminUser, UserRole } from '@/types/news';
+import { rolePermissions } from '@/data/adminMockData';
+import { userService, ExtendedAdminUser } from '@/lib/userService';
+import { AdminRole } from '@/types/admin';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -17,17 +18,34 @@ import { useActivityLog } from '@/context/ActivityLogContext';
 const AdminUsers = () => {
   const { hasPermission, currentUser } = useAdminAuth();
   const { logActivity } = useActivityLog();
-  const [users, setUsers] = useState<AdminUser[]>(adminUsers);
+  const [users, setUsers] = useState<ExtendedAdminUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editingUser, setEditingUser] = useState<ExtendedAdminUser | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'author' as UserRole,
+    role: 'author' as AdminRole,
     isActive: true
   });
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const data = await userService.getUsers();
+      setUsers(data);
+    } catch (err) {
+      toast.error('Failed to fetch users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const canManageUsers = hasPermission('manageUsers');
 
@@ -46,23 +64,22 @@ const AdminUsers = () => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role: AdminRole) => {
     const colors = {
       admin: 'bg-red-500 text-white',
       editor: 'bg-purple-500 text-white',
       journalist: 'bg-blue-500 text-white',
-      author: 'bg-green-500 text-white',
-      reporter: 'bg-amber-500 text-white'
+      author: 'bg-green-500 text-white'
     };
     return colors[role] || 'bg-gray-500 text-white';
   };
 
-  const getRoleIcon = (role: UserRole) => {
+  const getRoleIcon = (role: AdminRole) => {
     switch (role) {
       case 'admin':
         return <ShieldAlert className="h-4 w-4" />;
@@ -73,43 +90,31 @@ const AdminUsers = () => {
     }
   };
 
-  const handleSaveUser = () => {
-    if (editingUser) {
-      setUsers(users.map(u => 
-        u.id === editingUser.id 
-          ? { ...u, ...formData, permissions: rolePermissions[formData.role] || [] }
-          : u
-      ));
-      logActivity('update', 'user', {
-        resourceId: editingUser.id,
-        resourceName: formData.name,
-        details: `Updated user role to ${formData.role}`
-      });
-      toast.success('User updated successfully');
-    } else {
-      const newUser: AdminUser = {
-        id: `admin-${Date.now()}`,
-        name: formData.name,
-        email: formData.email,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random`,
-        role: formData.role,
-        isActive: formData.isActive,
-        permissions: rolePermissions[formData.role] || [],
-        createdAt: new Date()
-      };
-      setUsers([...users, newUser]);
-      logActivity('create', 'user', {
-        resourceId: newUser.id,
-        resourceName: formData.name,
-        details: `Created new ${formData.role} user`
-      });
-      toast.success('User created successfully');
+  const handleSaveUser = async () => {
+    try {
+      if (editingUser) {
+        await userService.updateProfile(editingUser.id, formData);
+
+        logActivity('update', 'user', {
+          resourceId: editingUser.id,
+          resourceName: formData.name,
+          details: `Updated user role to ${formData.role}`
+        });
+        toast.success('User updated successfully');
+      } else {
+        // Create user logic (needs database column for password if we don't use Supabase Auth)
+        toast.info('New user creation is currently via Supabase Dashboard');
+        return;
+      }
+      setIsDialogOpen(false);
+      resetForm();
+      fetchUsers();
+    } catch (err) {
+      toast.error('Failed to save user');
     }
-    setIsDialogOpen(false);
-    resetForm();
   };
 
-  const handleEditUser = (user: AdminUser) => {
+  const handleEditUser = (user: ExtendedAdminUser) => {
     setEditingUser(user);
     setFormData({
       name: user.name,
@@ -134,7 +139,7 @@ const AdminUsers = () => {
   const toggleUserStatus = (id: string) => {
     const user = users.find(u => u.id === id);
     const newStatus = !user?.isActive;
-    setUsers(users.map(u => 
+    setUsers(users.map(u =>
       u.id === id ? { ...u, isActive: newStatus } : u
     ));
     logActivity('toggle', 'user', {
@@ -181,7 +186,7 @@ const AdminUsers = () => {
               </div>
               <div>
                 <Label>Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as UserRole })}>
+                <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as AdminRole })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -190,7 +195,6 @@ const AdminUsers = () => {
                     <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="journalist">Journalist</SelectItem>
                     <SelectItem value="author">Author</SelectItem>
-                    <SelectItem value="reporter">Reporter</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -245,7 +249,6 @@ const AdminUsers = () => {
             <SelectItem value="editor">Editor</SelectItem>
             <SelectItem value="journalist">Journalist</SelectItem>
             <SelectItem value="author">Author</SelectItem>
-            <SelectItem value="reporter">Reporter</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -278,32 +281,29 @@ const AdminUsers = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-border">
               <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
                 <span>Joined: {format(user.createdAt, 'MMM d, yyyy')}</span>
-                {user.lastLogin && (
-                  <span>Last: {format(user.lastLogin, 'MMM d')}</span>
-                )}
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="flex-1"
                   onClick={() => handleEditUser(user)}
                 >
                   <Edit className="h-3 w-3 mr-1" /> Edit
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleUserStatus(user.id)}
                 >
                   {user.isActive ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   size="sm"
                   onClick={() => handleDeleteUser(user.id)}
                   disabled={user.role === 'admin'}

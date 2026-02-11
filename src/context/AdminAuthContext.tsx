@@ -8,7 +8,7 @@ export type { ExtendedAdminUser };
 interface AdminAuthContextType {
   currentUser: ExtendedAdminUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => boolean;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: keyof RolePermissions) => boolean;
   canAccessPath: (path: string) => boolean;
@@ -59,8 +59,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, []);
 
-  const login = useCallback((email: string, password: string, rememberMe = false): boolean => {
-    const user = userService.authenticate(email, password);
+  const login = useCallback(async (email: string, password: string, rememberMe = false): Promise<boolean> => {
+    const user = await userService.authenticate(email, password);
 
     if (user) {
       setCurrentUser(user);

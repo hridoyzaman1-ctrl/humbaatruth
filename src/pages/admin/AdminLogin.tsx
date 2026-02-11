@@ -110,7 +110,7 @@ const AdminLogin = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Attempt login
-    const success = login(email, password, rememberMe);
+    const success = await login(email, password, rememberMe);
 
     if (success) {
       rateLimiter.recordAttempt(true);

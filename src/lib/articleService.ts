@@ -1,58 +1,81 @@
+import { supabase } from './supabase';
 import { Article } from '@/types/news';
-import { articles as initialArticles } from '@/data/mockData';
 
-const STORAGE_KEY = 'truthlens_articles';
+export const getArticles = async (): Promise<Article[]> => {
+    const { data, error } = await supabase
+        .from('articles')
+        .select(`
+            *,
+            author:authors(*)
+        `)
+        .order('published_at', { ascending: false });
 
-export const getArticles = (): Article[] => {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            // Merge stored articles with initial structure if needed, 
-            // but for now, we assume stored state is the truth.
-            // We need to convert date strings back to Date objects
-            const parsed = JSON.parse(stored);
-            return parsed.map((a: any) => ({
-                ...a,
-                publishedAt: new Date(a.publishedAt),
-                createdAt: new Date(a.createdAt),
-                updatedAt: new Date(a.updatedAt)
-            }));
-        }
-    } catch (error) {
-        console.error('Error loading articles from storage:', error);
+    if (error) {
+        console.error('Error fetching articles:', error);
+        return [];
     }
 
-    // If no storage or error, return initial mock data
-    return initialArticles;
+    return data as Article[];
 };
 
-export const saveArticles = (articles: Article[]) => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
-        // Dispatch a custom event so other components can listen for updates
-        window.dispatchEvent(new Event('articlesUpdated'));
-    } catch (error) {
-        console.error('Error saving articles to storage:', error);
-    }
+export const saveArticles = async (articles: Article[]) => {
+    // Note: This function as a bulk 'save all' is inefficient for SQL.
+    // In a real database, we save individual records.
+    // However, to keep compatibility with the current dashboard logic, 
+    // we will implement a 'upsert' for individual articles in a separate function.
+    console.warn('saveArticles (bulk) is deprecated. Use upsertArticle instead.');
 };
 
-export const getArticleBySlug = (slug: string): Article | undefined => {
-    const articles = getArticles();
-    return articles.find(a => a.slug === slug);
+export const upsertArticle = async (article: Partial<Article>) => {
+    const { data, error } = await supabase
+        .from('articles')
+        .upsert({
+            title: article.title,
+            slug: article.slug,
+            excerpt: article.excerpt,
+            content: article.content,
+            category_id: article.category,
+            author_id: article.author?.id,
+            featured_image: article.featuredImage,
+            video_url: article.videoUrl,
+            has_video: article.hasVideo,
+            show_on_homepage: article.showOnHomepage,
+            tags: article.tags,
+            is_breaking: article.isBreaking,
+            is_featured: article.isFeatured,
+            status: article.status,
+            published_at: article.publishedAt,
+            updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
 };
 
-export const getArticleById = (id: string): Article | undefined => {
-    const articles = getArticles();
-    return articles.find(a => a.id === id);
+export const deleteArticle = async (id: string) => {
+    const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
 };
 
-export const incrementArticleViews = (id: string) => {
-    const articles = getArticles();
-    const updated = articles.map(a => {
-        if (a.id === id) {
-            return { ...a, views: (a.views || 0) + 1 };
-        }
-        return a;
-    });
-    saveArticles(updated);
+export const getArticleBySlug = async (slug: string): Promise<Article | null> => {
+    const { data, error } = await supabase
+        .from('articles')
+        .select('*, author:authors(*)')
+        .eq('slug', slug)
+        .single();
+
+    if (error) return null;
+    return data as Article;
+};
+
+export const incrementArticleViews = async (id: string) => {
+    // Atomic increment
+    const { error } = await supabase.rpc('increment_views', { article_id: id });
+    if (error) console.error('Error incrementing views:', error);
 };

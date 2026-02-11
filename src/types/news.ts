@@ -1,12 +1,12 @@
-export type Category = 
-  | 'national' 
-  | 'international' 
-  | 'economy' 
-  | 'politics' 
-  | 'sports' 
-  | 'entertainment' 
-  | 'technology' 
-  | 'editorial' 
+export type Category =
+  | 'national'
+  | 'international'
+  | 'economy'
+  | 'politics'
+  | 'sports'
+  | 'entertainment'
+  | 'technology'
+  | 'editorial'
   | 'untold-stories';
 
 export interface MenuItem {
@@ -60,7 +60,7 @@ export interface Article {
   tags: string[];
   isBreaking: boolean;
   isFeatured: boolean;
-  status: 'draft' | 'published' | 'scheduled';
+  status: 'draft' | 'published' | 'scheduled' | 'pending_review' | 'rejected';
   publishedAt: Date;
   createdAt: Date;
   updatedAt: Date;
