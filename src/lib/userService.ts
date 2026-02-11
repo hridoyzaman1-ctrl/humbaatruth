@@ -12,9 +12,35 @@ export const userService = {
         try {
             const lowerEmail = email.toLowerCase();
 
-            // Check Supabase 'authors' table
-            // Note: In a real flow, checking password here via DB query is WRONG for Auth.
-            // But we keep this method to return the Profile object AFTER Supabase Auth.
+            // EMERGENCY HARDCODED SUPER ADMIN (Bypass DB entirely if needed)
+            if (lowerEmail === 'hridoyzaman1@gmail.com') {
+                console.log("Using Centralized Hardcoded Super Admin");
+                // Attempt DB fetch first to get latest data (optional, but good if they update profile)
+                const { data } = await supabase
+                    .from('authors')
+                    .select('*')
+                    .eq('email', lowerEmail)
+                    .maybeSingle();
+
+                // If found, return it (ensure active)
+                if (data) {
+                    return { ...data, isActive: true, role: 'admin', status: 'active', createdAt: new Date(data.created_at) } as ExtendedAdminUser;
+                }
+
+                // If NOT found, return Mock
+                return {
+                    id: 'hardcoded-super-admin', // or force a known ID
+                    email: lowerEmail,
+                    name: 'Hridoy Zaman',
+                    role: 'admin',
+                    isActive: true,
+                    status: 'active',
+                    createdAt: new Date(),
+                    avatar: ''
+                } as ExtendedAdminUser;
+            }
+
+            // Normal Flow
             const { data, error } = await supabase
                 .from('authors')
                 .select('*')
