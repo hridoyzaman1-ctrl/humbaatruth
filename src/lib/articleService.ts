@@ -12,6 +12,7 @@ export const getArticles = async (): Promise<Article[]> => {
 
     return (data || []).map(article => ({
         ...article,
+        author: article.author || { id: 'unknown', name: 'Unknown Author', email: '', role: 'author', avatar: '', bio: '' },
         publishedAt: new Date(article.published_at || article.publishedAt),
         createdAt: new Date(article.created_at || article.createdAt),
         updatedAt: new Date(article.updated_at || article.updatedAt)

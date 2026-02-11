@@ -500,10 +500,10 @@ const AdminArticles = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    <Badge variant="outline" className="capitalize">{article.category.replace('-', ' ')}</Badge>
+                    <Badge variant="outline" className="capitalize">{(article.category || 'uncategorized').replace('-', ' ')}</Badge>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                    {article.author.name}
+                    {article.author?.name || 'Unknown Author'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -590,7 +590,7 @@ const AdminArticles = () => {
                   <h4 className="font-medium text-foreground text-sm line-clamp-2 leading-tight">{article.title}</h4>
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                  <span className="truncate">By {article.author.name}</span>
+                  <span className="truncate">By {article.author?.name || 'Unknown'}</span>
                   <span>•</span>
                   <span>{article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
                     ? format(article.publishedAt, 'MMM d, yyyy')
@@ -600,7 +600,7 @@ const AdminArticles = () => {
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">
-              <Badge variant="outline" className="capitalize text-xs">{article.category.replace('-', ' ')}</Badge>
+              <Badge variant="outline" className="capitalize text-xs">{(article.category || 'uncategorized').replace('-', ' ')}</Badge>
               <div className="flex gap-1">
                 {getStatusBadge(article.status)}
                 {article.isBreaking && (
@@ -684,7 +684,7 @@ const AdminArticles = () => {
                 <h3 className="font-semibold mb-2">{reviewingArticle.title}</h3>
                 <p className="text-sm text-muted-foreground mb-2">{reviewingArticle.excerpt}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>By {reviewingArticle.author.name}</span>
+                  <span>By {reviewingArticle.author?.name || 'Unknown'}</span>
                   <span>•</span>
                   <Badge variant="outline" className="capitalize">{reviewingArticle.category}</Badge>
                 </div>
