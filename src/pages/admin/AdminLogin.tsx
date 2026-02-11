@@ -76,36 +76,11 @@ const AdminLogin = () => {
       const success = await login(email, password, rememberMe);
 
       if (success) {
-        // 2. Fetch fresh profile to check Status immediately
-        // (The context might take a split second to update, so we fetch directly to be safe/fast)
-        const { data: profile } = await supabase
-          .from('authors')
-          .select('status, role')
-          .eq('email', email)
-          .single();
-
-        if (profile) {
-          if (profile.status === 'active') {
-            rateLimiter.recordAttempt(true);
-            logActivity('login', 'session', {
-              details: 'Successful Login'
-            });
-            toast.success('Welcome back!');
-            const from = (location.state as { from?: string })?.from || '/admin';
-            navigate(from, { replace: true });
-          } else {
-            // Not active
-            await logout();
-            if (profile.status === 'pending') setError('Your account is pending admin approval.');
-            else if (profile.status === 'rejected') setError('Access Request Denied.');
-            else setError('Account Suspended.');
-          }
-        } else {
-          // Should not happen if login success
-          await logout();
-          setError('Profile not found.');
-        }
-
+        // Success! The AdminAuthContext handles setting the currentUser 
+        // and its useEffect will handle the redirect.
+        toast.success('Welcome back!');
+        // We don't navigate immediately here if we want to wait for the Context to settle,
+        // but since we've alerted success, the useEffect in this component will trigger.
       } else {
         rateLimiter.recordAttempt(false);
         setError('Invalid credentials. Please try again.');
