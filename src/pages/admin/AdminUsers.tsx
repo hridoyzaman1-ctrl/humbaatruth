@@ -89,56 +89,20 @@ const AdminUsers = () => {
   };
 
   const handleReject = async (user: AdminUser) => {
-    if (!confirm(`Are you sure you want to reject and remove ${user.name}? This cannot be undone.`)) return;
+    if (!confirm(`Are you sure you want to reject and PERMANENTLY delete ${user.name}? This will allow them to sign up again with the same email if they wish.`)) return;
 
     try {
-      // Identify user in Auth to delete them completely so they can sign up again if needed (or we keep them as rejected)
-      // The prompt says: "if rejected then they wont be ablle to login and can again signup and request for access"
-      // If we keep them as 'rejected', they can't signup again with same email easily unless we catch that.
-      // Requirement: "can again signup and request for access".
-      // So we should DELETE them from DB completely? 
-      // "until acceptance cant login... wont be able to login or sign up again unless either accepted or rejected" 
-      // Actually "rejected... can again signup" implies deletion is cleaner.
-
-      // Delete from Authors (Public Profile)
-      const { error: dbError } = await supabase.from('authors').delete().eq('id', user.id);
-      if (dbError) throw dbError;
-
-      // Delete from Auth Users (We need a server function or admin client for this typically).
-      // RLS might block deleting from auth.users directly from client.
-      // If we can't delete auth.users from here, we mark status='rejected' in authors.
-      // BUT user said "can again signup". Status='rejected' prevents duplicate email signup error.
-      // So we MUST delete.
-      // Let's try the RPC / SQL way if we had one, but we are client side.
-      // Using the `wipe` script logic? No.
-
-      // Allow "Pseudo-Reject" = Delete 'authors' row? 
-      // If we delete authors row, the Auth User still exists. They can't sign up again (Email taken).
-      // So we must update Author status to 'rejected' OR we need a backend function to delete Auth User.
-      // Given constraints, I'll set status = 'rejected'. 
-      // The prompt says "can again signup". This implies the previous record is GONE.
-      // I will implement a trick: We can't delete `auth.users` easily from client without service role.
-      // **Correction**: I will set status to 'rejected'. User can't sign up with SAME email if Auth User exists.
-      // User can only "request access" again if we delete.
-      // I will assume for now status='rejected' blocks login (as implemented in Login).
-      // Re-signup with same email requires deleting the old account.
-      // **Decision**: I'll offer "Revoke/Delete" using a Server Function if available? No.
-      // I will use `status = rejected`. If they want to try again, they contact admin to delete? 
-      // Wait, "if rejected then they wont be ablle to login and can again signup". 
-      // This is strict. ONLY way to signup again with same email is if the email is free.
-      // I will rely on the Admin to "Delete" the user if they want to allow re-signup.
-      // So "Reject" button -> Sets status 'rejected'. "Delete" button -> Tries to delete.
-
-      const { error } = await supabase
-        .from('authors')
-        .update({ status: 'rejected' })
-        .eq('id', user.id);
+      const { error } = await supabase.rpc('delete_user_entirely', {
+        target_user_id: user.id
+      });
 
       if (error) throw error;
-      toast.success('User rejected');
+
+      toast.success('User application rejected and account purged');
       fetchUsers();
-    } catch (error) {
-      toast.error('Operation failed');
+    } catch (error: any) {
+      console.error('Rejection Error:', error);
+      toast.error(`Operation failed: ${error.message}`);
     }
   };
 

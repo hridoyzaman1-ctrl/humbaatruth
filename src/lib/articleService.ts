@@ -20,7 +20,7 @@ const DEFAULT_AUTHOR = {
 
 // Map a raw Supabase row to a safe Article object
 const mapArticle = (row: any): Article => ({
-    id: row.id,
+    id: String(row.id || ''),
     title: row.title || 'Untitled',
     slug: row.slug || 'untitled',
     excerpt: row.excerpt || '',
@@ -30,16 +30,16 @@ const mapArticle = (row: any): Article => ({
     customAuthor: row.custom_author || null,
     featuredImage: row.featured_image || row.featuredImage || '',
     videoUrl: row.video_url || row.videoUrl || '',
-    hasVideo: row.has_video || row.hasVideo || false,
+    hasVideo: !!(row.has_video || row.hasVideo),
     showOnHomepage: row.show_on_homepage ?? true,
-    tags: row.tags || [],
-    isBreaking: row.is_breaking || row.isBreaking || false,
-    isFeatured: row.is_featured || row.isFeatured || false,
+    tags: Array.isArray(row.tags) ? row.tags : [], // Strict array check
+    isBreaking: !!(row.is_breaking || row.isBreaking),
+    isFeatured: !!(row.is_featured || row.isFeatured),
     status: row.status || 'draft',
     publishedAt: safeDate(row.published_at || row.publishedAt),
     createdAt: safeDate(row.created_at || row.createdAt),
     updatedAt: safeDate(row.updated_at || row.updatedAt),
-    views: row.views || 0
+    views: Number(row.views || 0)
 });
 
 export const getArticles = async (): Promise<Article[]> => {

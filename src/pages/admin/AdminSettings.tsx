@@ -34,7 +34,6 @@ const AdminSettings = () => {
     articlesPerPage: '10',
     defaultCategory: 'national',
     timezone: 'UTC',
-    dateFormat: 'MMM d, yyyy',
     maintenanceMode: false
   });
 
@@ -317,20 +316,7 @@ const AdminSettings = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="dateFormat" className="text-sm">Date Format</Label>
-                <Select value={settings.dateFormat} onValueChange={(val) => updateSetting('dateFormat', val)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MMM d, yyyy">Jan 14, 2026</SelectItem>
-                    <SelectItem value="dd/MM/yyyy">14/01/2026</SelectItem>
-                    <SelectItem value="MM/dd/yyyy">01/14/2026</SelectItem>
-                    <SelectItem value="yyyy-MM-dd">2026-01-14</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="timezone" className="text-sm">Timezone</Label>
                 <Select value={settings.timezone} onValueChange={(val) => updateSetting('timezone', val)}>

@@ -58,29 +58,6 @@ const ArticlePage = () => {
     }
   }, [article?.id, article?.category]);
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <p className="text-muted-foreground">Loading article...</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!article) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="font-display text-3xl font-bold text-foreground">Article Not Found</h1>
-          <Link to="/" className="mt-4 inline-block text-primary hover:underline">
-            Return to Home
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
-
   const heroVideoRef = useRef<HTMLDivElement>(null);
   const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
 
@@ -114,6 +91,29 @@ const ArticlePage = () => {
     if (!isVideoArticle || !article?.videoUrl) return null;
     return getYoutubeId(article.videoUrl);
   }, [isVideoArticle, article?.videoUrl]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <p className="text-muted-foreground">Loading article...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!article) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="font-display text-3xl font-bold text-foreground">Article Not Found</h1>
+          <Link to="/" className="mt-4 inline-block text-primary hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
 
   const articleContainerClass = `container mx-auto px-4 ${isVideoArticle ? 'mt-6 md:mt-8' : '-mt-20'} relative z-10`;
 
@@ -176,7 +176,7 @@ const ArticlePage = () => {
             <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={article.author?.avatar || ''}
+                  src={article.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${article.author?.name || 'User'}`}
                   alt={article.customAuthor || article.author?.name || 'Author'}
                   className="h-10 w-10 rounded-full object-cover"
                 />
@@ -190,7 +190,7 @@ const ArticlePage = () => {
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
-                    ? format(article.publishedAt, 'MMM d, yyyy')
+                    ? format(article.publishedAt, 'd MMMM, yyyy')
                     : 'Recent'}
                 </span>
                 <span className="flex items-center gap-1">
@@ -203,7 +203,7 @@ const ArticlePage = () => {
 
           {/* Article Content */}
           <div className="mt-8 prose prose-lg max-w-none dark:prose-invert">
-            {article.content.split('\n\n').map((paragraph, index) => (
+            {(article.content || '').split('\n\n').map((paragraph, index) => (
               <p key={index} className="mb-4 text-justify leading-relaxed">
                 {paragraph}
               </p>
@@ -212,7 +212,7 @@ const ArticlePage = () => {
 
           {/* Tags */}
           <div className="mt-8 flex flex-wrap gap-2">
-            {article.tags.map((tag) => (
+            {(article.tags || []).map((tag) => (
               <Badge key={tag} variant="outline">
                 #{tag}
               </Badge>

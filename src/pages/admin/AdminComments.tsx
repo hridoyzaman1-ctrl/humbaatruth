@@ -56,7 +56,7 @@ import {
 import { toast } from 'sonner';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { getAllComments, updateCommentStatus, deleteComment as deleteCommentService } from '@/lib/commentService';
+import { getAllComments, updateCommentStatus, deleteComment } from '@/lib/commentService';
 
 interface Comment {
   id: string;
@@ -135,23 +135,25 @@ const AdminComments = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleDelete = (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) {
-      deleteCommentService(comment.articleId, commentId);
+  const handleDelete = async (commentId: string) => {
+    try {
+      await deleteComment(commentId);
       loadComments();
       logActivity('delete', 'comment', {
         resourceId: commentId,
-        resourceName: comment?.author,
-        details: `Deleted comment on "${comment?.articleTitle}"`
+        details: `Deleted comment`
       });
       toast.success('Comment deleted successfully');
+    } catch (err) {
+      toast.error('Failed to delete comment');
     }
   };
 
-  const handleBulkDelete = (status: string) => {
+  const handleBulkDelete = async (status: string) => {
     const toDelete = comments.filter(c => c.status === status);
-    toDelete.forEach(c => deleteCommentService(c.articleId, c.id));
+    for (const c of toDelete) {
+      await deleteComment(c.id);
+    }
     loadComments();
     logActivity('bulk_delete', 'comment', {
       details: `Bulk deleted ${toDelete.length} ${status} comments`
@@ -159,45 +161,45 @@ const AdminComments = () => {
     toast.success(`${toDelete.length} ${status} comments deleted`);
   };
 
-  const handleApprove = (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) {
-      updateCommentStatus(comment.articleId, commentId, 'approved');
+  const handleApprove = async (commentId: string) => {
+    try {
+      await updateCommentStatus(commentId, 'approved');
       loadComments();
       logActivity('approve', 'comment', {
         resourceId: commentId,
-        resourceName: comment?.author,
-        details: `Approved comment on "${comment?.articleTitle}"`
+        details: `Approved comment`
       });
       toast.success('Comment approved');
+    } catch (err) {
+      toast.error('Failed to approve comment');
     }
   };
 
-  const handleFlag = (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) {
-      updateCommentStatus(comment.articleId, commentId, 'flagged');
+  const handleFlag = async (commentId: string) => {
+    try {
+      await updateCommentStatus(commentId, 'flagged');
       loadComments();
       logActivity('flag', 'comment', {
         resourceId: commentId,
-        resourceName: comment?.author,
-        details: `Flagged comment for review`
+        details: `Flagged comment`
       });
       toast.success('Comment flagged for review');
+    } catch (err) {
+      toast.error('Failed to flag comment');
     }
   };
 
-  const handleMarkSpam = (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) {
-      updateCommentStatus(comment.articleId, commentId, 'spam');
+  const handleMarkSpam = async (commentId: string) => {
+    try {
+      await updateCommentStatus(commentId, 'spam');
       loadComments();
       logActivity('flag', 'comment', {
         resourceId: commentId,
-        resourceName: comment?.author,
         details: `Marked comment as spam`
       });
       toast.success('Comment marked as spam');
+    } catch (err) {
+      toast.error('Failed to mark as spam');
     }
   };
 

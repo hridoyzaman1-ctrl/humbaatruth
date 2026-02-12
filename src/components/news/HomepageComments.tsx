@@ -1,149 +1,83 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ThumbsUp, Clock, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { getPublishedArticles } from '@/lib/articleService';
+import { MessageCircle, ThumbsUp, Clock, Loader2 } from 'lucide-react';
+import { getLatestApprovedComments, Comment } from '@/lib/commentService';
 import { formatDistanceToNow } from 'date-fns';
 
-// Mock comments data linked to real articles
-const recentComments = [
-  {
-    id: '1',
-    articleId: '5',
-    articleTitle: 'Why hospital bills scare Dhaka patients more than disease',
-    author: 'Rahim Uddin',
-    avatar: 'https://ui-avatars.com/api/?name=Rahim+U&background=random',
-    content: 'This is the reality for so many middle-class families. The costs are simply unsustainable.',
-    likes: 156,
-    createdAt: new Date('2026-01-17T11:30:00')
-  },
-  {
-    id: '2',
-    articleId: '7',
-    articleTitle: 'Toxic waste in our rivers: Stop this threat immediately',
-    author: 'Fatima Begum',
-    avatar: 'https://ui-avatars.com/api/?name=Fatima+B&background=random',
-    content: 'We see the pollution every day. When will the authorities actually enforce the laws?',
-    likes: 89,
-    createdAt: new Date('2026-01-17T08:45:00')
-  },
-  {
-    id: '3',
-    articleId: '9',
-    articleTitle: 'Watch / No more silence: Akram urges BCB to show courage',
-    author: 'Cricket Fan BD',
-    avatar: 'https://ui-avatars.com/api/?name=CF&background=random',
-    content: 'Akram Bhai is right. We need strong leadership in BCB now more than ever.',
-    likes: 243,
-    createdAt: new Date('2026-01-17T12:15:00')
-  },
-  {
-    id: '4',
-    articleId: '10',
-    articleTitle: 'In Focus / The untold history of why Khaleda Zia entered politics',
-    author: 'History Buff',
-    avatar: 'https://ui-avatars.com/api/?name=HB&background=random',
-    content: 'A fascinating look back. Her journey was far from easy given the political climate of that time.',
-    likes: 112,
-    createdAt: new Date('2026-01-15T16:20:00')
-  }
-];
-
 export const HomepageComments = () => {
-  const [articles, setArticles] = useState<import('@/types/news').Article[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchArticles = async () => {
+    const fetchComments = async () => {
       try {
-        const data = await getPublishedArticles();
-        // Get the latest 4 articles or whatever is available
-        setArticles(data.slice(0, 4));
+        const data = await getLatestApprovedComments(10);
+        setComments(data);
       } catch (err) {
-        console.error('Failed to fetch articles for comments:', err);
+        console.error('Failed to load homepage comments:', err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchArticles();
+    fetchComments();
   }, []);
 
-  // Mock comment texts to pair with real articles
-  const mockCommentTexts = [
-    "This is the reality for so many middle-class families. The costs are simply unsustainable.",
-    "We see the pollution every day. When will the authorities actually enforce the laws?",
-    "Akram Bhai is right. We need strong leadership in BCB now more than ever.",
-    "A fascinating look back. Her journey was far from easy given the political climate of that time."
-  ];
-
-  const mockAuthors = [
-    { name: 'Rahim Uddin', avatar: 'https://ui-avatars.com/api/?name=Rahim+U&background=random', likes: 156, days: 27 },
-    { name: 'Fatima Begum', avatar: 'https://ui-avatars.com/api/?name=Fatima+B&background=random', likes: 89, days: 27 },
-    { name: 'Cricket Fan BD', avatar: 'https://ui-avatars.com/api/?name=CF&background=random', likes: 243, days: 27 },
-    { name: 'History Buff', avatar: 'https://ui-avatars.com/api/?name=HB&background=random', likes: 112, days: 28 }
-  ];
-
-  if (isLoading || articles.length === 0) {
-    return null; // Don't show the section if no articles or still loading
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2 text-sm text-muted-foreground">Loading reader reactions...</p>
+      </div>
+    );
   }
 
+  if (comments.length === 0) return null;
+
   return (
-    <section className="py-8 bg-muted/30">
+    <section className="py-12 border-t border-border bg-muted/30">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-xl font-bold text-foreground md:text-2xl">
-              Reader Comments
-            </h2>
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-foreground">Reader Comments</h2>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {articles.map((article, index) => {
-            const author = mockAuthors[index % mockAuthors.length];
-            const content = mockCommentTexts[index % mockCommentTexts.length];
-
-            return (
-              <Link
-                key={article.id}
-                to={`/article/${article.slug}`}
-                className="group block rounded-xl bg-card border border-border p-4 hover:shadow-lg transition-all"
-              >
-                {/* Article Reference */}
-                <p className="text-xs text-primary font-medium line-clamp-1 mb-3">
-                  Re: {article.title}
-                </p>
-
-                {/* Comment Content */}
-                <p className="text-sm text-foreground line-clamp-3 mb-4">
-                  "{content}"
-                </p>
-
-                {/* Author & Meta */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={author.avatar}
-                      alt={author.name}
-                      className="h-6 w-6 rounded-full object-cover"
-                    />
-                    <span className="text-xs font-medium text-foreground">{author.name}</span>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {comments.map((comment) => (
+            <Link
+              key={comment.id}
+              to={`/article/${comment.articleSlug}#comments-section`}
+              className="group bg-card hover:bg-card/80 border border-border rounded-xl p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 block h-full flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-3 text-xs">
+                <span className="font-medium text-primary line-clamp-1 flex-1">Re: {comment.articleTitle}</span>
+              </div>
+              <p className="text-sm text-foreground italic line-clamp-3 mb-4 flex-1">
+                "{comment.content}"
+              </p>
+              <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                    {comment.author.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <ThumbsUp className="h-3 w-3" />
-                      {author.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {author.days} days
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-foreground">{comment.author}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-2.5 w-2.5" />
+                      {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
                     </span>
                   </div>
                 </div>
-              </Link>
-            );
-          })}
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ThumbsUp className="h-3 w-3" />
+                  {comment.likes}
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

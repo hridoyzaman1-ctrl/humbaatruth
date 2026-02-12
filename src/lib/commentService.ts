@@ -1,133 +1,164 @@
-import { Comment } from '@/components/news/CommentSection';
-import { getArticles } from './articleService';
+import { supabase } from './supabase';
 
-const COMMENTS_KEY_PREFIX = 'comments_';
-const ALL_COMMENTS_KEY = 'truthlens_all_comments_index';
+export interface Comment {
+    id: string;
+    author: string;
+    email?: string;
+    content: string;
+    articleId: string;
+    createdAt: Date;
+    likes: number;
+    status: 'approved' | 'pending' | 'flagged' | 'spam';
+    replies?: Comment[];
+    articleTitle?: string;
+    articleSlug?: string;
+}
 
-// Get all comment keys from localStorage
-export const getAllCommentKeys = (): string[] => {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(COMMENTS_KEY_PREFIX)) {
-            keys.push(key);
-        }
+// Get comments for a specific article
+export const getComments = async (articleId: string): Promise<Comment[]> => {
+    const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('article_id', articleId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching comments:', error);
+        return [];
     }
-    return keys;
-};
 
-// Get all comments across all articles
-export const getAllComments = async (): Promise<Comment[]> => {
-    const articles = await getArticles();
-    const articleMap = new Map(articles.map(a => [a.id, { title: a.title, slug: a.slug }]));
+    // Group into parent/child structure
+    const allComments: Comment[] = data.map(c => ({
+        id: c.id,
+        author: c.author_name,
+        email: c.author_email,
+        content: c.content,
+        articleId: c.article_id,
+        createdAt: new Date(c.created_at),
+        likes: c.likes,
+        status: c.status,
+        parent_id: c.parent_id
+    } as any));
 
-    const allComments: Comment[] = [];
-    const keys = getAllCommentKeys();
-
-    keys.forEach(key => {
-        try {
-            const data = localStorage.getItem(key);
-            if (data) {
-                const comments: Comment[] = JSON.parse(data);
-                // Add article metadata
-                const articleId = key.replace(COMMENTS_KEY_PREFIX, '');
-                const articleInfo = articleMap.get(articleId);
-
-                comments.forEach(comment => {
-                    // Flatten replies
-                    allComments.push({
-                        ...comment,
-                        createdAt: new Date(comment.createdAt),
-                        articleTitle: articleInfo?.title || 'Unknown Article',
-                        articleSlug: articleInfo?.slug || '',
-                    } as any);
-
-                    // Add replies as separate entries
-                    if (comment.replies) {
-                        comment.replies.forEach(reply => {
-                            allComments.push({
-                                ...reply,
-                                createdAt: new Date(reply.createdAt),
-                                articleTitle: articleInfo?.title || 'Unknown Article',
-                                articleSlug: articleInfo?.slug || '',
-                                isReply: true,
-                                parentId: comment.id,
-                            } as any);
-                        });
-                    }
-                });
-            }
-        } catch (e) {
-            console.error('Error parsing comments for key:', key, e);
-        }
+    const parents = allComments.filter(c => !(c as any).parent_id);
+    parents.forEach(p => {
+        p.replies = allComments.filter(c => (c as any).parent_id === p.id);
     });
 
-    // Sort by createdAt descending
-    allComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return parents;
+};
 
-    return allComments;
+// Get top 10 approved comments globally (for homepage)
+export const getLatestApprovedComments = async (limit = 10): Promise<Comment[]> => {
+    const { data, error } = await supabase
+        .from('comments')
+        .select(`
+      *,
+      articles (
+        title,
+        slug
+      )
+    `)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        console.error('Error fetching latest comments:', error);
+        return [];
+    }
+
+    return data.map(c => ({
+        id: c.id,
+        author: c.author_name,
+        content: c.content,
+        articleId: c.article_id,
+        createdAt: new Date(c.created_at),
+        likes: c.likes,
+        status: c.status,
+        articleTitle: (c.articles as any)?.title || 'Unknown Article',
+        articleSlug: (c.articles as any)?.slug || ''
+    } as any));
+};
+
+// Post a new comment
+export const addComment = async (comment: Omit<Comment, 'id' | 'createdAt' | 'likes' | 'status' | 'replies'>) => {
+    const { data, error } = await supabase
+        .from('comments')
+        .insert({
+            article_id: comment.articleId,
+            author_name: comment.author,
+            author_email: comment.email,
+            content: comment.content,
+            parent_id: (comment as any).parent_id,
+            status: 'approved' // Default to approved for now as requested
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    window.dispatchEvent(new Event('commentsUpdated'));
+    return data;
+};
+
+// Admin: Get all comments for moderation
+export const getAllComments = async (): Promise<Comment[]> => {
+    const { data, error } = await supabase
+        .from('comments')
+        .select(`
+      *,
+      articles (
+        title,
+        slug
+      )
+    `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching all comments:', error);
+        return [];
+    }
+
+    return data.map(c => ({
+        id: c.id,
+        author: c.author_name,
+        email: c.author_email,
+        content: c.content,
+        articleId: c.article_id,
+        createdAt: new Date(c.created_at),
+        likes: c.likes,
+        status: c.status,
+        articleTitle: (c.articles as any)?.title || 'Unknown Article',
+        articleSlug: (c.articles as any)?.slug || '',
+        isReply: !!c.parent_id
+    } as any));
 };
 
 // Update comment status
-export const updateCommentStatus = (articleId: string, commentId: string, status: Comment['status']) => {
-    const key = COMMENTS_KEY_PREFIX + articleId;
-    const data = localStorage.getItem(key);
-    if (data) {
-        const comments: Comment[] = JSON.parse(data);
-        const updateStatus = (comment: Comment): Comment => {
-            if (comment.id === commentId) {
-                return { ...comment, status };
-            }
-            if (comment.replies) {
-                return { ...comment, replies: comment.replies.map(updateStatus) };
-            }
-            return comment;
-        };
-        const updated = comments.map(updateStatus);
-        localStorage.setItem(key, JSON.stringify(updated));
-        window.dispatchEvent(new Event('commentsUpdated'));
-    }
-};
+export const updateCommentStatus = async (commentId: string, status: string) => {
+    const { error } = await supabase
+        .from('comments')
+        .update({ status })
+        .eq('id', commentId);
 
-// Delete comment
-export const deleteComment = (articleId: string, commentId: string) => {
-    const key = COMMENTS_KEY_PREFIX + articleId;
-    const data = localStorage.getItem(key);
-    if (data) {
-        const comments: Comment[] = JSON.parse(data);
-
-        // Check if it's a top-level comment or a reply
-        const filtered = comments.filter(c => c.id !== commentId).map(c => {
-            if (c.replies) {
-                return { ...c, replies: c.replies.filter(r => r.id !== commentId) };
-            }
-            return c;
-        });
-
-        localStorage.setItem(key, JSON.stringify(filtered));
-        window.dispatchEvent(new Event('commentsUpdated'));
-    }
-};
-
-// Save comments for an article (used by CommentSection)
-export const saveComments = (articleId: string, comments: Comment[]) => {
-    const key = COMMENTS_KEY_PREFIX + articleId;
-    localStorage.setItem(key, JSON.stringify(comments));
+    if (error) throw error;
     window.dispatchEvent(new Event('commentsUpdated'));
 };
 
-// Get comments for an article
-export const getComments = (articleId: string): Comment[] => {
-    const key = COMMENTS_KEY_PREFIX + articleId;
-    const data = localStorage.getItem(key);
-    if (!data) return [];
-    try {
-        return JSON.parse(data).map((c: any) => ({
-            ...c,
-            createdAt: new Date(c.createdAt),
-            replies: c.replies?.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt) }))
-        }));
-    } catch {
-        return [];
-    }
+// Delete comment
+export const deleteComment = async (commentId: string) => {
+    const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+    if (error) throw error;
+    window.dispatchEvent(new Event('commentsUpdated'));
 };
+
+// Increment likes
+export const incrementCommentLikes = async (commentId: string) => {
+    const { error } = await supabase.rpc('increment_comment_likes', { comment_id: commentId });
+    if (error) throw error;
+};
+

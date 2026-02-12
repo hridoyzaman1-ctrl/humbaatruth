@@ -28,8 +28,26 @@ const AdminSignup = () => {
         setIsLoading(true);
 
         try {
-            // 1. Sign Up with Meta Data
-            const { data, error } = await supabase.auth.signUp({
+            // 1. Check if user already exists in authors table (even if not in auth yet)
+            // This prevents duplicate requests from being submitted if someone clears cookies but same email.
+            const { data: existingUser } = await supabase
+                .from('authors')
+                .select('status')
+                .eq('email', formData.email.toLowerCase())
+                .maybeSingle();
+
+            if (existingUser) {
+                if (existingUser.status === 'pending') {
+                    throw new Error('You already have a pending request. Please wait for admin approval.');
+                }
+                if (existingUser.status === 'active') {
+                    throw new Error('This account is already active. Please go to login.');
+                }
+                // If status is 'rejected', we allow them to proceed (they will be overwritten or purged)
+            }
+
+            // 2. Sign Up with Meta Data
+            const { error: signUpError } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
                 options: {
@@ -37,13 +55,19 @@ const AdminSignup = () => {
                         name: formData.name,
                         age: parseInt(formData.age),
                         gender: formData.gender,
-                        role: 'user', // Default role for applicant
-                        status: 'pending' // Default status
+                        role: 'author', // Default role
+                        status: 'pending'
                     }
                 }
             });
 
-            if (error) throw error;
+            if (signUpError) {
+                // Handle the case where Auth record exists but profile doesn't (rare sync issue)
+                if (signUpError.message.includes('already registered')) {
+                    throw new Error('This email is already registered. If you forgot your password or were rejected, please contact support.');
+                }
+                throw signUpError;
+            }
 
             setIsSuccess(true);
             toast.success('Request Submitted Successfully');

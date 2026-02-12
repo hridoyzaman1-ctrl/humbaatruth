@@ -44,7 +44,6 @@ export interface SiteSettingsConfig {
     articlesPerPage: string;
     defaultCategory: string;
     timezone: string;
-    dateFormat: string;
     maintenanceMode: boolean;
 }
 
