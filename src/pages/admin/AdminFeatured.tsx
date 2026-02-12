@@ -161,6 +161,7 @@ const AdminFeatured = () => {
     breakingAutoSwipe: true,
     autoSwipeInterval: 5000,
     tickerSpeed: 20,
+    tickerMode: 'scroll',
     heroAutoSwipe: true
   });
   const [breakingNewsIds, setBreakingNewsIds] = useState<string[]>([]);
@@ -310,17 +311,43 @@ const AdminFeatured = () => {
                 />
               </div>
               <div>
+                <Label className="text-xs text-muted-foreground">Ticker Animation Style</Label>
+                <Select
+                  value={settings.tickerMode || 'scroll'}
+                  onValueChange={(val: 'swipe' | 'scroll') => setSettings({ ...settings, tickerMode: val })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scroll">Continuous Scroll (Marquee)</SelectItem>
+                    <SelectItem value="swipe">Slide / Swipe (Card)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label className="text-xs text-muted-foreground">
-                  Ticker Speed: {settings.tickerSpeed || 20}
+                  {settings.tickerMode === 'swipe' ? 'Swipe Interval' : 'Scroll Speed'}
                 </Label>
-                <Slider
-                  value={[settings.tickerSpeed || 20]}
-                  onValueChange={([v]) => setSettings({ ...settings, tickerSpeed: v })}
-                  min={5}
-                  max={100}
-                  step={5}
-                  className="mt-2"
-                />
+                {settings.tickerMode === 'swipe' ? (
+                  <Slider
+                    value={[settings.autoSwipeInterval]}
+                    onValueChange={([v]) => setSettings({ ...settings, autoSwipeInterval: v })}
+                    min={3000}
+                    max={10000}
+                    step={1000}
+                    className="mt-2"
+                  />
+                ) : (
+                  <Slider
+                    value={[settings.tickerSpeed || 20]}
+                    onValueChange={([v]) => setSettings({ ...settings, tickerSpeed: v })}
+                    min={5}
+                    max={100}
+                    step={5}
+                    className="mt-2"
+                  />
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">
@@ -595,7 +622,7 @@ const AdminFeatured = () => {
           </ul>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 };
 

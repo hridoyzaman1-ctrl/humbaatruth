@@ -18,6 +18,7 @@ export interface FeaturedSettings {
     breakingAutoSwipe?: boolean;
     autoSwipeInterval?: number;
     tickerSpeed?: number; // 1-100, default 20
+    tickerMode?: 'swipe' | 'scroll'; // New setting
     heroAutoSwipe?: boolean;
 }
 
