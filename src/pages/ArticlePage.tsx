@@ -3,18 +3,28 @@ import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { getArticleBySlug, getPublishedArticles, incrementArticleViews } from '@/lib/articleService';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Eye, Share2, Facebook, Twitter, Linkedin, Mail, Link2, MessageCircle } from 'lucide-react';
+import { Clock, Eye, Facebook, Twitter, Linkedin, Mail, Link2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { ArticleCard } from '@/components/news/ArticleCard';
 import { CommentSection } from '@/components/news/CommentSection';
 import { getYoutubeId } from '@/lib/videoUtils';
 import { FloatingVideoPlayer } from '@/components/news/FloatingVideoPlayer';
+import { SEO } from '@/components/seo/SEO';
+
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+  </svg>
+);
 
 const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<import('@/types/news').Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Load related articles
+  const [relatedArticles, setRelatedArticles] = useState<import('@/types/news').Article[]>([]);
 
   useEffect(() => {
     const loadArticle = async () => {
@@ -36,9 +46,6 @@ const ArticlePage = () => {
       incrementArticleViews(article.id);
     }
   }, [article?.id]);
-
-  // Load related articles
-  const [relatedArticles, setRelatedArticles] = useState<import('@/types/news').Article[]>([]);
 
   useEffect(() => {
     const fetchRelated = async () => {
@@ -119,6 +126,15 @@ const ArticlePage = () => {
 
   return (
     <Layout>
+      <SEO
+        title={article.title}
+        description={article.excerpt}
+        image={article.featuredImage}
+        type="article"
+        author={article.customAuthor || article.author?.name}
+        keywords={article.tags}
+      />
+
       {/* Hero Image or Video */}
       <div
         ref={heroVideoRef}
@@ -235,11 +251,11 @@ const ArticlePage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition-colors"
+                className="gap-2 hover:bg-black hover:text-white hover:border-black transition-colors"
                 onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`, '_blank', 'width=600,height=400')}
               >
-                <Twitter className="h-4 w-4" />
-                <span className="hidden sm:inline">Twitter</span>
+                <XIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Post</span>
               </Button>
               <Button
                 variant="outline"
