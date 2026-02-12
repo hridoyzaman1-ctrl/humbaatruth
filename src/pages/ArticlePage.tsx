@@ -219,11 +219,49 @@ const ArticlePage = () => {
 
           {/* Article Content */}
           <div className="mt-8 prose prose-lg max-w-none dark:prose-invert">
-            {(article.content || '').split('\n\n').map((paragraph, index) => (
-              <p key={index} className="mb-4 text-justify leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
+            {(() => {
+              const paragraphs = (article.content || '').split('\n\n');
+              const showIntegratedImage = isVideoArticle && article.featuredImage;
+              // If article is "long" (more than 4 paragraphs), place in middle. Else at end.
+              const isLongArticle = paragraphs.length > 4;
+              const imageIndex = isLongArticle ? Math.floor(paragraphs.length / 2) - 1 : -1;
+
+              return (
+                <>
+                  {paragraphs.map((paragraph, index) => (
+                    <div key={index}>
+                      <p className="mb-4 text-justify leading-relaxed">
+                        {paragraph}
+                      </p>
+                      {/* Insert Image in Middle */}
+                      {showIntegratedImage && isLongArticle && index === imageIndex && (
+                        <figure className="my-8">
+                          <img
+                            src={article.featuredImage}
+                            alt={article.title}
+                            className="w-full md:w-3/4 mx-auto rounded-xl shadow-md object-cover max-h-[400px]"
+                          />
+                          <figcaption className="text-center text-sm text-muted-foreground mt-2 italic">
+                            {article.title}
+                          </figcaption>
+                        </figure>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Insert Image at End (for small articles) */}
+                  {showIntegratedImage && !isLongArticle && (
+                    <figure className="my-8">
+                      <img
+                        src={article.featuredImage}
+                        alt={article.title}
+                        className="w-full md:w-3/4 mx-auto rounded-xl shadow-md object-cover max-h-[400px]"
+                      />
+                    </figure>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Tags */}
