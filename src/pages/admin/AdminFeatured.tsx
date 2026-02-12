@@ -586,7 +586,7 @@ const AdminFeatured = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {availableArticles
-                    .filter(a => !heroSideArticleIds.includes(a.id) && !heroFeaturedIds.includes(a.id))
+                    .filter(a => !heroSideArticleIds.includes(a.id))
                     .map((article) => (
                       <SelectItem key={article.id} value={article.id}>
                         <span className="truncate">
