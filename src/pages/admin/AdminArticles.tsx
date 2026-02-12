@@ -167,6 +167,15 @@ const AdminArticles = () => {
     setIsDialogOpen(true);
   };
 
+  // Ensure state is synced for HMR updates
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      isManualAuthor: prev.isManualAuthor ?? false,
+      manualAuthorName: prev.manualAuthorName ?? ''
+    }));
+  }, []);
+
   const openEditDialog = (article: ExtendedArticle) => {
     // Permission Check:
     // 1. Admins/Editors (canEditAll) can edit ANY article (published or not, any author).
@@ -832,7 +841,7 @@ const AdminArticles = () => {
                     checked={formData.isManualAuthor}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isManualAuthor: checked }))}
                   />
-                  <Label htmlFor="manual-author">Use Custom Author Name</Label>
+                  <Label htmlFor="manual-author" className="font-medium">Manually Enter Author Name</Label>
                 </div>
 
                 {formData.isManualAuthor && (
