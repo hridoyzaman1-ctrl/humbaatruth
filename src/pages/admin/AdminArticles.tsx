@@ -280,9 +280,10 @@ const AdminArticles = () => {
       toast.success(editingArticle ? 'Article updated successfully!' : 'Article created successfully!');
       fetchArticles(); // Refresh from DB
       setIsDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submit error:', error);
-      toast.error('Failed to save article');
+      const msg = error?.message || 'Unknown error';
+      toast.error(`Failed to save article: ${msg}`);
     }
   };
 

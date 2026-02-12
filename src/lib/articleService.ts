@@ -10,6 +10,11 @@ export const getArticles = async (): Promise<Article[]> => {
         `)
         .order('published_at', { ascending: false });
 
+    if (error) {
+        console.error('Error fetching articles:', error);
+        return [];
+    }
+
     return (data || []).map(article => ({
         ...article,
         customAuthor: article.custom_author,
@@ -21,39 +26,58 @@ export const getArticles = async (): Promise<Article[]> => {
 };
 
 export const saveArticles = async (articles: Article[]) => {
-    // Note: This function as a bulk 'save all' is inefficient for SQL.
-    // In a real database, we save individual records.
-    // However, to keep compatibility with the current dashboard logic, 
-    // we will implement a 'upsert' for individual articles in a separate function.
     console.warn('saveArticles (bulk) is deprecated. Use upsertArticle instead.');
 };
 
+// Map frontend status to DB-compatible status
+const mapStatusForDb = (status: string): string => {
+    // DB only allows: 'draft', 'published', 'scheduled'
+    // Frontend may use: 'pending_review', 'rejected', etc.
+    if (status === 'pending_review' || status === 'rejected') {
+        return 'draft'; // Save as draft in DB
+    }
+    return status || 'draft';
+};
+
 export const upsertArticle = async (article: Partial<Article>) => {
+    // Build payload — only include id if editing
+    const payload: Record<string, any> = {
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        content: article.content,
+        category_id: article.category,
+        author_id: article.author?.id || null,
+        featured_image: article.featuredImage,
+        video_url: article.videoUrl || null,
+        has_video: article.hasVideo || false,
+        show_on_homepage: article.showOnHomepage ?? true,
+        custom_author: article.customAuthor || null,
+        tags: article.tags || [],
+        is_breaking: article.isBreaking || false,
+        is_featured: article.isFeatured || false,
+        status: mapStatusForDb(article.status || 'draft'),
+        published_at: article.publishedAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    // Include id only if editing an existing article
+    if (article.id) {
+        payload.id = article.id;
+    }
+
+    console.log('Upserting article payload:', JSON.stringify(payload, null, 2));
+
     const { data, error } = await supabase
         .from('articles')
-        .upsert({
-            title: article.title,
-            slug: article.slug,
-            excerpt: article.excerpt,
-            content: article.content,
-            category_id: article.category,
-            author_id: article.author?.id,
-            featured_image: article.featuredImage,
-            video_url: article.videoUrl,
-            has_video: article.hasVideo,
-            show_on_homepage: article.showOnHomepage,
-            custom_author: article.customAuthor,
-            tags: article.tags,
-            is_breaking: article.isBreaking,
-            is_featured: article.isFeatured,
-            status: article.status,
-            published_at: article.publishedAt,
-            updated_at: new Date().toISOString()
-        })
+        .upsert(payload)
         .select()
         .single();
 
-    if (error) throw error;
+    if (error) {
+        console.error('Supabase upsert error:', error.message, error.details, error.hint);
+        throw error;
+    }
     return data;
 };
 
