@@ -1,13 +1,66 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Youtube, Linkedin, MessageCircle, Send, Mail, Share2, Phone, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { socialMediaLinks, siteSettings } from '@/data/mockData';
+import { socialMediaLinks as defaultSocialLinks, siteSettings as defaultSiteSettings } from '@/data/mockData';
 import { contactInfoData } from '@/data/siteContactData';
+import { getContacts } from '@/lib/contactService';
+import { getSocialLinks, getSiteSettings } from '@/lib/settingsService';
+import { ContactInfo } from '@/data/siteContactData';
 import logo from '@/assets/truthlens-logo.png';
 
 export const Footer = () => {
-  const visibleSocialLinks = socialMediaLinks.filter(link => link.isVisible && link.url);
-  const footerContacts = contactInfoData.filter(c => c.isVisible && c.showInFooter).sort((a, b) => a.order - b.order);
+  const [socialLinks, setSocialLinks] = useState(defaultSocialLinks);
+  const [siteSettings, setSiteSettings] = useState(defaultSiteSettings);
+  const [footerContacts, setFooterContacts] = useState<ContactInfo[]>([]);
+
+  useEffect(() => {
+    // Load social links from DB
+    const loadData = async () => {
+      try {
+        const [dbSocial, dbSettings] = await Promise.all([
+          getSocialLinks(defaultSocialLinks),
+          getSiteSettings(),
+        ]);
+        setSocialLinks(dbSocial as any);
+        if (dbSettings) {
+          setSiteSettings(prev => ({ ...prev, ...dbSettings }));
+        }
+      } catch (error) {
+        console.error('Footer: failed to load settings', error);
+      }
+    };
+    loadData();
+
+    // Load contacts from localStorage/contactService
+    const loadContacts = () => {
+      const data = getContacts();
+      setFooterContacts(data.filter(c => c.isVisible && c.showInFooter).sort((a, b) => a.order - b.order));
+    };
+    loadContacts();
+
+    // Listen for admin updates
+    const handleSocialUpdate = () => {
+      getSocialLinks(defaultSocialLinks).then(data => setSocialLinks(data as any));
+    };
+    const handleContactUpdate = () => loadContacts();
+    const handleSettingsUpdate = () => {
+      getSiteSettings().then(data => {
+        if (data) setSiteSettings(prev => ({ ...prev, ...data }));
+      });
+    };
+
+    window.addEventListener('socialLinksUpdated', handleSocialUpdate);
+    window.addEventListener('contactsUpdated', handleContactUpdate);
+    window.addEventListener('siteSettingsUpdated', handleSettingsUpdate);
+    return () => {
+      window.removeEventListener('socialLinksUpdated', handleSocialUpdate);
+      window.removeEventListener('contactsUpdated', handleContactUpdate);
+      window.removeEventListener('siteSettingsUpdated', handleSettingsUpdate);
+    };
+  }, []);
+
+  const visibleSocialLinks = socialLinks.filter(link => link.isVisible && link.url);
 
   const getContactIcon = (type: string) => {
     switch (type) {
@@ -85,9 +138,9 @@ export const Footer = () => {
             {visibleSocialLinks.length > 0 && (
               <div className="mt-6 flex flex-wrap gap-3">
                 {visibleSocialLinks.map((link) => (
-                  <a 
+                  <a
                     key={link.id}
-                    href={link.url} 
+                    href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground transition-colors hover:text-primary"
@@ -154,7 +207,7 @@ export const Footer = () => {
                 </li>
               )}
             </ul>
-            
+
             {/* Social Links as Buttons */}
             {visibleSocialLinks.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-2">

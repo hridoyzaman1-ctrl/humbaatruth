@@ -1,14 +1,29 @@
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Mail, MapPin, Phone, Send } from 'lucide-react';
-import { contactInfoData } from '@/data/siteContactData';
+import { getContacts } from '@/lib/contactService';
+import { ContactInfo } from '@/data/siteContactData';
 
 const ContactPage = () => {
-  const contacts = contactInfoData.filter(c => c.isVisible && c.showOnContactPage).sort((a, b) => a.order - b.order);
-  
+  const [contacts, setContacts] = useState<ContactInfo[]>([]);
+
+  useEffect(() => {
+    const loadContacts = () => {
+      const data = getContacts();
+      setContacts(data.filter(c => c.isVisible && c.showOnContactPage).sort((a, b) => a.order - b.order));
+    };
+    loadContacts();
+
+    // Listen for admin updates
+    const handleUpdate = () => loadContacts();
+    window.addEventListener('contactsUpdated', handleUpdate);
+    return () => window.removeEventListener('contactsUpdated', handleUpdate);
+  }, []);
+
   const emailContacts = contacts.filter(c => c.type === 'email');
   const phoneContacts = contacts.filter(c => c.type === 'phone');
   const addressContacts = contacts.filter(c => c.type === 'address');
@@ -43,7 +58,7 @@ const ContactPage = () => {
                     {emailContacts.map((contact) => (
                       <div key={contact.id} className="mt-1">
                         <p className="text-xs text-muted-foreground/70">{contact.label}</p>
-                        <a 
+                        <a
                           href={`mailto:${contact.value}`}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
@@ -68,7 +83,7 @@ const ContactPage = () => {
                     {phoneContacts.map((contact) => (
                       <div key={contact.id} className="mt-1">
                         <p className="text-xs text-muted-foreground/70">{contact.label}</p>
-                        <a 
+                        <a
                           href={`tel:${contact.value.replace(/\D/g, '')}`}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >

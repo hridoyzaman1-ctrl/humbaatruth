@@ -5,14 +5,16 @@ import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from './ArticleCard';
 import { Category } from '@/types/news';
+import { Button } from '@/components/ui/button';
 
 interface CategorySectionProps {
   category: Category;
   title: string;
   showMore?: boolean;
+  maxArticles?: number;
 }
 
-export const CategorySection = ({ category, title, showMore = true }: CategorySectionProps) => {
+export const CategorySection = ({ category, title, showMore = true, maxArticles = 4 }: CategorySectionProps) => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   useEffect(() => {
@@ -29,9 +31,11 @@ export const CategorySection = ({ category, title, showMore = true }: CategorySe
     return () => window.removeEventListener('articlesUpdated', handleUpdate);
   }, []);
 
-  const categoryArticles = articlesList.filter(a => a.category === category).slice(0, 4);
+  const allCategoryArticles = articlesList.filter(a => a.category === category);
+  const displayedArticles = allCategoryArticles.slice(0, maxArticles);
+  const hasMoreArticles = allCategoryArticles.length > maxArticles;
 
-  if (categoryArticles.length === 0) return null;
+  if (displayedArticles.length === 0) return null;
 
   return (
     <section className="py-4 md:py-6">
@@ -52,10 +56,21 @@ export const CategorySection = ({ category, title, showMore = true }: CategorySe
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {categoryArticles.map((article) => (
+          {displayedArticles.map((article) => (
             <ArticleCard key={article.id} article={article} variant="compact" />
           ))}
         </div>
+
+        {/* View More Button — shown when there are more articles than the maxArticles limit */}
+        {hasMoreArticles && showMore && (
+          <div className="mt-6 text-center">
+            <Link to={`/category/${category}`}>
+              <Button variant="outline" className="px-8">
+                View More {title} →
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );

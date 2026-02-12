@@ -28,11 +28,11 @@ import { getSectionsSettings, saveSectionsSettings, SectionConfig } from '@/lib/
 import { getCategoryColor } from '@/lib/categoryUtils';
 
 const defaultSections: SectionConfig[] = [
-  { id: 'breaking-news', name: 'Breaking News Ticker', icon: <Newspaper className="h-4 w-4" />, enabled: true, order: 1, maxArticles: 5, selectedArticleIds: ['1', '2', '5'], showOnHomepage: true },
-  { id: 'hero', name: 'Hero Section', icon: <LayoutGrid className="h-4 w-4" />, enabled: true, order: 2, maxArticles: 5, selectedArticleIds: ['1', '3', '4', '7'], showOnHomepage: true },
-  { id: 'video-stories', name: 'Video Stories', icon: <Video className="h-4 w-4" />, enabled: true, order: 3, maxArticles: 4, selectedArticleIds: ['1', '3', '10', '13'], showOnHomepage: true },
+  { id: 'breaking-news', name: 'Breaking News Ticker', icon: <Newspaper className="h-4 w-4" />, enabled: true, order: 1, maxArticles: 5, selectedArticleIds: [], showOnHomepage: true },
+  { id: 'hero', name: 'Hero Section', icon: <LayoutGrid className="h-4 w-4" />, enabled: true, order: 2, maxArticles: 5, selectedArticleIds: [], showOnHomepage: true },
+  { id: 'video-stories', name: 'Video Stories', icon: <Video className="h-4 w-4" />, enabled: true, order: 3, maxArticles: 4, selectedArticleIds: [], showOnHomepage: true },
   { id: 'latest-stories', name: 'Latest Stories', icon: <Clock className="h-4 w-4" />, enabled: true, order: 4, maxArticles: 6, selectedArticleIds: [], showOnHomepage: true },
-  { id: 'trending', name: 'Trending Now', icon: <TrendingUp className="h-4 w-4" />, enabled: true, order: 5, maxArticles: 5, selectedArticleIds: ['1', '3', '7', '10', '13'], showOnHomepage: true },
+  { id: 'trending', name: 'Trending Now', icon: <TrendingUp className="h-4 w-4" />, enabled: true, order: 5, maxArticles: 5, selectedArticleIds: [], showOnHomepage: true },
   { id: 'comments', name: 'Reader Comments', icon: <MessageSquare className="h-4 w-4" />, enabled: true, order: 6, maxArticles: 3, selectedArticleIds: [], showOnHomepage: true },
   { id: 'internship-banner', name: 'Internship Banner', icon: <Briefcase className="h-4 w-4" />, enabled: true, order: 7, maxArticles: 0, selectedArticleIds: [], showOnHomepage: true },
   { id: 'untold-stories', name: 'Untold Stories', icon: <BookOpen className="h-4 w-4" />, enabled: true, order: 8, maxArticles: 4, selectedArticleIds: [], showOnHomepage: true, category: 'untold-stories' },
@@ -229,8 +229,18 @@ const AdminSections = () => {
         getArticles(),
         getSectionsSettings(defaultSections)
       ]);
+
       setArticlesList(data);
-      setSections(savedSections);
+
+      // Clean up saved sections: Remove IDs that don't exist in the fetched articles
+      // This fixes the "Ghost Data" issue where deleted or dummy IDs persist
+      const validArticleIds = new Set(data.map(a => a.id));
+      const cleanedSections = savedSections.map(section => ({
+        ...section,
+        selectedArticleIds: section.selectedArticleIds.filter(id => validArticleIds.has(id))
+      }));
+
+      setSections(cleanedSections);
     };
     loadData();
 

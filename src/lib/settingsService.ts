@@ -81,6 +81,7 @@ export const saveFeaturedSettings = async (settings: FeaturedSettings) => {
         .from('site_settings')
         .update({ hero_settings: settings })
         .eq('id', 1);
+    window.dispatchEvent(new Event('featuredSettingsUpdated'));
 };
 
 // --- Sections Settings ---
@@ -101,6 +102,7 @@ export const saveSectionsSettings = async (sections: SectionConfig[]) => {
         .from('site_settings')
         .update({ sections_settings: dataToSave })
         .eq('id', 1);
+    window.dispatchEvent(new Event('sectionsSettingsUpdated'));
 };
 
 // --- Menu Settings ---
@@ -114,6 +116,7 @@ export const saveMenuSettings = async (menuItems: MenuItem[]) => {
         .from('site_settings')
         .update({ menu_settings: menuItems })
         .eq('id', 1);
+    window.dispatchEvent(new Event('menuSettingsUpdated'));
 };
 
 // --- Site Settings ---
@@ -142,6 +145,7 @@ export const saveSiteSettings = async (settings: SiteSettingsConfig) => {
             config // Store the rest as JSON
         })
         .eq('id', 1);
+    window.dispatchEvent(new Event('siteSettingsUpdated'));
 };
 
 // --- Social Links ---
@@ -155,6 +159,7 @@ export const saveSocialLinks = async (links: SocialLink[]) => {
         .from('site_settings')
         .update({ social_links: links })
         .eq('id', 1);
+    window.dispatchEvent(new Event('socialLinksUpdated'));
 };
 
 // --- Categories ---
@@ -169,6 +174,7 @@ export const saveCategories = async (categories: any[]) => {
     for (const cat of categories) {
         await supabase.from('categories').upsert(cat);
     }
+    window.dispatchEvent(new Event('categoriesUpdated'));
 };
 
 // --- Contact Info ---

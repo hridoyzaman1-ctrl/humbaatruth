@@ -46,8 +46,14 @@ export const Header = () => {
 
   // Load menu items from Supabase settings and articles for search
   useEffect(() => {
-    getMenuSettings(defaultMenuItems).then(items => setMenuItems(items));
+    const loadMenu = () => getMenuSettings(defaultMenuItems).then(items => setMenuItems(items));
+    loadMenu();
     getPublishedArticles().then(a => setArticles(a));
+
+    // Re-fetch menu when admin saves changes
+    const handleMenuUpdate = () => loadMenu();
+    window.addEventListener('menuSettingsUpdated', handleMenuUpdate);
+    return () => window.removeEventListener('menuSettingsUpdated', handleMenuUpdate);
   }, []);
 
   // Update date at midnight

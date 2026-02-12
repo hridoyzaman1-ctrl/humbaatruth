@@ -92,40 +92,26 @@ export const CommentSection = ({ articleId }: CommentSectionProps) => {
     fetchComments();
   }, [fetchComments]);
 
-  // Real-time subscription setup - ready for Cloud integration
+  // Listen for admin comment moderation events
   useEffect(() => {
-    // TODO: Enable real-time updates when connected to Cloud
-    // Example with Supabase Realtime:
-    // const channel = supabase
-    //   .channel('comments-changes')
-    //   .on(
-    //     'postgres_changes',
-    //     {
-    //       event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-    //       schema: 'public',
-    //       table: 'comments',
-    //       filter: `article_id=eq.${articleId}`
-    //     },
-    //     (payload) => {
-    //       console.log('Comment change:', payload);
-    //       if (payload.eventType === 'INSERT' && payload.new.status === 'approved') {
-    //         setComments(prev => [payload.new as Comment, ...prev]);
-    //         toast.info('New comment posted!');
-    //       } else if (payload.eventType === 'DELETE') {
-    //         setComments(prev => prev.filter(c => c.id !== payload.old.id));
-    //       } else if (payload.eventType === 'UPDATE') {
-    //         setComments(prev => prev.map(c => 
-    //           c.id === payload.new.id ? payload.new as Comment : c
-    //         ));
-    //       }
-    //     }
-    //   )
-    //   .subscribe();
-    //
-    // return () => {
-    //   supabase.removeChannel(channel);
-    // };
-  }, [articleId]);
+    const handleCommentsUpdate = () => {
+      fetchComments();
+    };
+    window.addEventListener('commentsUpdated', handleCommentsUpdate);
+    // Also listen for storage events from other tabs
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key?.startsWith('comments_')) {
+        fetchComments();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('commentsUpdated', handleCommentsUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [fetchComments]);
+
+
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
