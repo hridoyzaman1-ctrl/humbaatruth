@@ -29,11 +29,24 @@ export const BreakingNewsTicker = ({
   });
 
   const fetchData = useCallback(async () => {
-    const articles = await getPublishedArticles();
-    setArticlesList(articles);
-    const featuredSettings = await getFeaturedSettings();
-    if (featuredSettings) {
-      setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+    try {
+      console.log('BreakingNews: Fetching data...');
+      const articles = await getPublishedArticles();
+      console.log('BreakingNews: Articles fetched:', articles?.length);
+      setArticlesList(articles || []);
+
+      console.log('BreakingNews: Fetching settings...');
+      const featuredSettings = await getFeaturedSettings().catch(e => {
+        console.error('BreakingNews: Settings fetch failed', e);
+        return null;
+      });
+      console.log('BreakingNews: Settings fetched:', featuredSettings);
+
+      if (featuredSettings) {
+        setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+      }
+    } catch (error) {
+      console.error('BreakingNews: Critical error in fetchData', error);
     }
   }, []);
 

@@ -28,11 +28,24 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchArticles = useCallback(async () => {
-    const data = await getPublishedArticles();
-    setArticlesList(data);
-    const featuredSettings = await getFeaturedSettings();
-    if (featuredSettings) {
-      setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+    try {
+      console.log('HeroSection: Fetching articles...');
+      const data = await getPublishedArticles();
+      console.log('HeroSection: Articles fetched:', data?.length);
+      setArticlesList(data || []);
+
+      console.log('HeroSection: Fetching settings...');
+      const featuredSettings = await getFeaturedSettings().catch(e => {
+        console.error('HeroSection: Settings fetch failed', e);
+        return null;
+      });
+      console.log('HeroSection: Settings fetched:', featuredSettings);
+
+      if (featuredSettings) {
+        setSettings((prev: any) => ({ ...prev, ...featuredSettings }));
+      }
+    } catch (error) {
+      console.error('HeroSection: Critical error in fetchArticles', error);
     }
   }, []);
 

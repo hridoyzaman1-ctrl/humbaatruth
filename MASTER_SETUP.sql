@@ -1,5 +1,5 @@
 -- ============================================================================
--- TRUTHLENS MASTER SETUP SCRIPT
+-- TRUTHLENS MASTER SETUP SCRIPT (FIXED & IDEMPOTENT)
 -- ============================================================================
 -- This ONE script replaces ALL previous SQL scripts.
 -- It is SAFE TO RUN MULTIPLE TIMES (fully idempotent).
@@ -178,6 +178,11 @@ DROP POLICY IF EXISTS "Public Read Articles" ON articles;
 DROP POLICY IF EXISTS "Create Articles" ON articles;
 DROP POLICY IF EXISTS "Update Articles" ON articles;
 DROP POLICY IF EXISTS "Delete Articles" ON articles;
+-- NEW POLICIES DROP (ADDED FIX)
+DROP POLICY IF EXISTS "articles_select_policy" ON articles;
+DROP POLICY IF EXISTS "articles_insert_policy" ON articles;
+DROP POLICY IF EXISTS "articles_update_policy" ON articles;
+DROP POLICY IF EXISTS "articles_delete_policy" ON articles;
 
 -- CATEGORIES policies
 DROP POLICY IF EXISTS "Allow public read access" ON categories;
