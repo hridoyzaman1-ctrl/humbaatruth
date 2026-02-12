@@ -17,6 +17,7 @@ export interface FeaturedSettings {
     maxHeroArticles: number;
     breakingAutoSwipe?: boolean;
     autoSwipeInterval?: number;
+    tickerSpeed?: number; // 1-100, default 20
     heroAutoSwipe?: boolean;
 }
 

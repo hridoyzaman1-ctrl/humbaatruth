@@ -160,6 +160,7 @@ const AdminFeatured = () => {
     maxHeroArticles: 5,
     breakingAutoSwipe: true,
     autoSwipeInterval: 5000,
+    tickerSpeed: 20,
     heroAutoSwipe: true
   });
   const [breakingNewsIds, setBreakingNewsIds] = useState<string[]>([]);
@@ -310,14 +311,14 @@ const AdminFeatured = () => {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  Swipe Interval: {settings.autoSwipeInterval / 1000}s
+                  Ticker Speed: {settings.tickerSpeed || 20}
                 </Label>
                 <Slider
-                  value={[settings.autoSwipeInterval]}
-                  onValueChange={([v]) => setSettings({ ...settings, autoSwipeInterval: v })}
-                  min={3000}
-                  max={10000}
-                  step={1000}
+                  value={[settings.tickerSpeed || 20]}
+                  onValueChange={([v]) => setSettings({ ...settings, tickerSpeed: v })}
+                  min={5}
+                  max={100}
+                  step={5}
                   className="mt-2"
                 />
               </div>
