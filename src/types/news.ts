@@ -57,6 +57,7 @@ export interface Article {
   videoUrl?: string;
   hasVideo?: boolean;
   showOnHomepage?: boolean;
+  customAuthor?: string; // NEW
   tags: string[];
   isBreaking: boolean;
   isFeatured: boolean;

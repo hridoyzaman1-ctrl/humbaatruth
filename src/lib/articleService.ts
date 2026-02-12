@@ -12,6 +12,7 @@ export const getArticles = async (): Promise<Article[]> => {
 
     return (data || []).map(article => ({
         ...article,
+        customAuthor: article.custom_author,
         author: article.author || { id: 'unknown', name: 'Unknown Author', email: '', role: 'author', avatar: '', bio: '' },
         publishedAt: new Date(article.published_at || article.publishedAt),
         createdAt: new Date(article.created_at || article.createdAt),
@@ -41,6 +42,7 @@ export const upsertArticle = async (article: Partial<Article>) => {
             video_url: article.videoUrl,
             has_video: article.hasVideo,
             show_on_homepage: article.showOnHomepage,
+            custom_author: article.customAuthor,
             tags: article.tags,
             is_breaking: article.isBreaking,
             is_featured: article.isFeatured,
@@ -74,6 +76,7 @@ export const getArticleBySlug = async (slug: string): Promise<Article | null> =>
     if (error) return null;
     return {
         ...data,
+        customAuthor: data.custom_author,
         publishedAt: new Date(data.published_at || data.publishedAt),
         createdAt: new Date(data.created_at || data.createdAt),
         updatedAt: new Date(data.updated_at || data.updatedAt)

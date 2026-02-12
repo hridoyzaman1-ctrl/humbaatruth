@@ -77,5 +77,22 @@ export const userService = {
         if (error) throw error;
     },
 
-    // ... Any other User Management methods can stay if they are pure DB operations
+    async getAuthors() {
+        // Fetch all authors (users) from the database
+        const { data, error } = await supabase
+            .from('authors')
+            .select('*')
+            .order('name');
+
+        if (error) {
+            console.error('Error fetching authors:', error);
+            return [];
+        }
+
+        return (data || []).map(author => ({
+            ...author,
+            isActive: true,
+            createdAt: author.created_at ? new Date(author.created_at) : new Date()
+        })) as ExtendedAdminUser[];
+    },
 };

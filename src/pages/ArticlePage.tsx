@@ -13,7 +13,18 @@ import { FloatingVideoPlayer } from '@/components/news/FloatingVideoPlayer';
 
 const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const article = slug ? getArticleBySlug(slug) : undefined;
+  const [article, setArticle] = useState<import('@/types/news').Article | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadArticle = async () => {
+      if (!slug) { setIsLoading(false); return; }
+      const fetched = await getArticleBySlug(slug);
+      setArticle(fetched);
+      setIsLoading(false);
+    };
+    loadArticle();
+  }, [slug]);
 
   useEffect(() => {
     if (article?.id) {
@@ -37,6 +48,16 @@ const ArticlePage = () => {
       fetchRelated();
     }
   }, [article]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <p className="text-muted-foreground">Loading article...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!article) {
     return (
@@ -144,8 +165,8 @@ const ArticlePage = () => {
                   className="h-10 w-10 rounded-full object-cover"
                 />
                 <div>
-                  <p className="font-medium text-foreground">{article.author.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{article.author.role}</p>
+                  <p className="font-medium text-foreground">{article.customAuthor || article.author.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{article.customAuthor ? 'Contributor' : article.author.role}</p>
                 </div>
               </div>
 

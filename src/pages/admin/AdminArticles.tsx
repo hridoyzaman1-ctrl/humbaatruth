@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { categories, authors } from '@/data/mockData';
+import { categories } from '@/data/mockData';
 import { getArticles, upsertArticle, deleteArticle } from '@/lib/articleService';
+import { userService, ExtendedAdminUser } from '@/lib/userService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,15 @@ const AdminArticles = () => {
   // Load articles from service
   const [articlesList, setArticlesList] = useState<ExtendedArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dbAuthors, setDbAuthors] = useState<ExtendedAdminUser[]>([]);
+
+  useEffect(() => {
+    const loadAuthors = async () => {
+      const authors = await userService.getAuthors();
+      setDbAuthors(authors);
+    };
+    loadAuthors();
+  }, []);
 
   const fetchArticles = async () => {
     setIsLoading(true);
@@ -95,6 +105,8 @@ const AdminArticles = () => {
     status: 'draft' as ArticleStatus,
     publishedAt: undefined,
     authorId: '1',
+    manualAuthorName: '', // NEW
+    isManualAuthor: false, // NEW
     reviewNote: ''
   });
 
@@ -148,7 +160,9 @@ const AdminArticles = () => {
       status: 'draft',
       publishedAt: undefined,
       reviewNote: '',
-      authorId: currentUser?.id || '1'
+      authorId: currentUser?.id || '1',
+      manualAuthorName: '',
+      isManualAuthor: false
     });
     setIsDialogOpen(true);
   };
@@ -181,7 +195,9 @@ const AdminArticles = () => {
       status: article.status,
       publishedAt: article.publishedAt,
       reviewNote: article.reviewNote || '',
-      authorId: article.author.id
+      authorId: article.author.id,
+      manualAuthorName: article.customAuthor || '',
+      isManualAuthor: !!article.customAuthor
     });
     setIsDialogOpen(true);
   };
@@ -212,7 +228,10 @@ const AdminArticles = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const author = authors.find(a => a.id === formData.authorId) || authors[0];
+    const author = dbAuthors.find(a => a.id === formData.authorId);
+    // If no author found (shouldn't happen if loaded), fallback to current user or first in list
+    const finalAuthor = author || dbAuthors[0] || (currentUser as ExtendedAdminUser);
+
     const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
 
     try {
@@ -223,7 +242,13 @@ const AdminArticles = () => {
         excerpt: formData.excerpt,
         content: formData.content,
         category: formData.category,
-        author,
+        author: {
+          ...finalAuthor,
+          bio: finalAuthor.bio || '',
+          avatar: finalAuthor.avatar || '',
+          role: finalAuthor.role as any // cast compatible roles
+        },
+        customAuthor: formData.isManualAuthor ? formData.manualAuthorName : null,
         featuredImage: formData.featuredImage || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=1200',
         videoUrl: formData.videoUrl || undefined,
         hasVideo: !!formData.videoUrl,
@@ -503,7 +528,8 @@ const AdminArticles = () => {
                     <Badge variant="outline" className="capitalize">{(article.category || 'uncategorized').replace('-', ' ')}</Badge>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                    {article.author?.name || 'Unknown Author'}
+                    {article.customAuthor || article.author?.name || 'Unknown Author'}
+                    {article.customAuthor && <Badge variant="outline" className="ml-2 text-[10px] h-5">Custom</Badge>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -590,7 +616,7 @@ const AdminArticles = () => {
                   <h4 className="font-medium text-foreground text-sm line-clamp-2 leading-tight">{article.title}</h4>
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                  <span className="truncate">By {article.author?.name || 'Unknown'}</span>
+                  <span className="truncate">By {article.customAuthor || article.author?.name || 'Unknown'}</span>
                   <span>•</span>
                   <span>{article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
                     ? format(article.publishedAt, 'MMM d, yyyy')
@@ -684,7 +710,7 @@ const AdminArticles = () => {
                 <h3 className="font-semibold mb-2">{reviewingArticle.title}</h3>
                 <p className="text-sm text-muted-foreground mb-2">{reviewingArticle.excerpt}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>By {reviewingArticle.author?.name || 'Unknown'}</span>
+                  <span>By {reviewingArticle.customAuthor || reviewingArticle.author?.name || 'Unknown'}</span>
                   <span>•</span>
                   <Badge variant="outline" className="capitalize">{reviewingArticle.category}</Badge>
                 </div>
@@ -788,7 +814,7 @@ const AdminArticles = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {authors.map(author => (
+                      {dbAuthors.map(author => (
                         <SelectItem key={author.id} value={author.id}>{author.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -796,6 +822,36 @@ const AdminArticles = () => {
                 </div>
               )}
             </div>
+
+            {/* Custom Author Name Toggle */}
+            {canEditAll && (
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/20">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="manual-author"
+                    checked={formData.isManualAuthor}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isManualAuthor: checked }))}
+                  />
+                  <Label htmlFor="manual-author">Use Custom Author Name</Label>
+                </div>
+
+                {formData.isManualAuthor && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <Label htmlFor="manualAuthorName">Author Name *</Label>
+                    <Input
+                      id="manualAuthorName"
+                      value={formData.manualAuthorName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, manualAuthorName: e.target.value }))}
+                      placeholder="Enter custom author name"
+                      required={formData.isManualAuthor}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This name will be displayed on the article instead of the selected user.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

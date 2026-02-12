@@ -13,6 +13,7 @@ export interface AdminUser {
   status: UserStatus; // NEW
   age?: number; // NEW
   gender?: string; // NEW
+  bio?: string; // NEW
   createdAt: Date;
 }
 
