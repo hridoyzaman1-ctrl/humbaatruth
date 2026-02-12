@@ -461,13 +461,33 @@ ON CONFLICT (id) DO UPDATE
 SET role = 'admin', status = 'active', name = 'Hridoy Zaman';
 
 
+-- ========================
+-- PART 11: STORAGE POLICIES (Fixes Media Upload)
+-- ========================
+-- This part ensures the 'media' bucket exists and has correct RLS policies.
+-- NOTE: SUPABASE Dashboard usually handles bucket creation, but these policies are CRITICAL.
+
+-- Allow Public Read Access to 'media' bucket
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public) 
+    VALUES ('media', 'media', true) 
+    ON CONFLICT (id) DO UPDATE SET public = true;
+END $$;
+
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
+CREATE POLICY "Public Read Access" ON storage.objects FOR SELECT USING (bucket_id = 'media');
+
+DROP POLICY IF EXISTS "Authenticated Upload Access" ON storage.objects;
+CREATE POLICY "Authenticated Upload Access" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'media' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated Delete Access" ON storage.objects;
+CREATE POLICY "Authenticated Delete Access" ON storage.objects FOR DELETE USING (bucket_id = 'media' AND auth.role() = 'authenticated');
+
+
 -- ============================================================================
 -- DONE! 
 -- 
--- AFTER running this script, you also need to:
--- 1. Go to Supabase Dashboard → Storage → Create new bucket
--- 2. Name: "media"
--- 3. Public bucket: ON
--- 4. File size limit: 10485760 (10MB)
+-- AFTER running this script, your site is fully synchronized and fixed.
 -- ============================================================================
 SELECT 'COMPLETE SQL SETUP FINISHED SUCCESSFULLY!' AS result;

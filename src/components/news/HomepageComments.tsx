@@ -51,19 +51,41 @@ const recentComments = [
 
 export const HomepageComments = () => {
   const [articles, setArticles] = useState<import('@/types/news').Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchArticles = async () => {
-      const data = await getPublishedArticles();
-      setArticles(data);
+      try {
+        const data = await getPublishedArticles();
+        // Get the latest 4 articles or whatever is available
+        setArticles(data.slice(0, 4));
+      } catch (err) {
+        console.error('Failed to fetch articles for comments:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchArticles();
   }, []);
 
-  const getArticleSlug = (articleId: string) => {
-    const article = articles.find(a => a.id === articleId);
-    return article?.slug || '';
-  };
+  // Mock comment texts to pair with real articles
+  const mockCommentTexts = [
+    "This is the reality for so many middle-class families. The costs are simply unsustainable.",
+    "We see the pollution every day. When will the authorities actually enforce the laws?",
+    "Akram Bhai is right. We need strong leadership in BCB now more than ever.",
+    "A fascinating look back. Her journey was far from easy given the political climate of that time."
+  ];
+
+  const mockAuthors = [
+    { name: 'Rahim Uddin', avatar: 'https://ui-avatars.com/api/?name=Rahim+U&background=random', likes: 156, days: 27 },
+    { name: 'Fatima Begum', avatar: 'https://ui-avatars.com/api/?name=Fatima+B&background=random', likes: 89, days: 27 },
+    { name: 'Cricket Fan BD', avatar: 'https://ui-avatars.com/api/?name=CF&background=random', likes: 243, days: 27 },
+    { name: 'History Buff', avatar: 'https://ui-avatars.com/api/?name=HB&background=random', likes: 112, days: 28 }
+  ];
+
+  if (isLoading || articles.length === 0) {
+    return null; // Don't show the section if no articles or still loading
+  }
 
   return (
     <section className="py-8 bg-muted/30">
@@ -78,45 +100,50 @@ export const HomepageComments = () => {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {recentComments.map((comment) => (
-            <Link
-              key={comment.id}
-              to={`/article/${getArticleSlug(comment.articleId)}`}
-              className="group block rounded-xl bg-card border border-border p-4 hover:shadow-lg transition-all"
-            >
-              {/* Article Reference */}
-              <p className="text-xs text-primary font-medium line-clamp-1 mb-3">
-                Re: {comment.articleTitle}
-              </p>
+          {articles.map((article, index) => {
+            const author = mockAuthors[index % mockAuthors.length];
+            const content = mockCommentTexts[index % mockCommentTexts.length];
 
-              {/* Comment Content */}
-              <p className="text-sm text-foreground line-clamp-3 mb-4">
-                "{comment.content}"
-              </p>
+            return (
+              <Link
+                key={article.id}
+                to={`/article/${article.slug}`}
+                className="group block rounded-xl bg-card border border-border p-4 hover:shadow-lg transition-all"
+              >
+                {/* Article Reference */}
+                <p className="text-xs text-primary font-medium line-clamp-1 mb-3">
+                  Re: {article.title}
+                </p>
 
-              {/* Author & Meta */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={comment.avatar}
-                    alt={comment.author}
-                    className="h-6 w-6 rounded-full object-cover"
-                  />
-                  <span className="text-xs font-medium text-foreground">{comment.author}</span>
+                {/* Comment Content */}
+                <p className="text-sm text-foreground line-clamp-3 mb-4">
+                  "{content}"
+                </p>
+
+                {/* Author & Meta */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={author.avatar}
+                      alt={author.name}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                    <span className="text-xs font-medium text-foreground">{author.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp className="h-3 w-3" />
+                      {author.likes}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {author.days} days
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-3 w-3" />
-                    {comment.likes}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {formatDistanceToNow(comment.createdAt, { addSuffix: false })}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

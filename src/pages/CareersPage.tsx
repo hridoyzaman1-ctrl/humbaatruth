@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,10 +68,12 @@ const CareersPage = () => {
                       )}
                     </div>
                   </div>
-                  <div>
-                    <Button className="whitespace-nowrap">
-                      Apply Now <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  <div className="flex-shrink-0">
+                    <Link to="/internship#apply">
+                      <Button className="whitespace-nowrap w-full md:w-auto">
+                        Apply Now <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>

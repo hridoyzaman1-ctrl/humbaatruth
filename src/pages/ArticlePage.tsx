@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { getArticleBySlug, getPublishedArticles, incrementArticleViews } from '@/lib/articleService';
@@ -18,10 +18,15 @@ const ArticlePage = () => {
 
   useEffect(() => {
     const loadArticle = async () => {
-      if (!slug) { setIsLoading(false); return; }
-      const fetched = await getArticleBySlug(slug);
-      setArticle(fetched);
-      setIsLoading(false);
+      try {
+        if (!slug) { setIsLoading(false); return; }
+        const fetched = await getArticleBySlug(slug);
+        setArticle(fetched);
+      } catch (err) {
+        console.error('Failed to load article:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadArticle();
   }, [slug]);
@@ -37,17 +42,21 @@ const ArticlePage = () => {
 
   useEffect(() => {
     const fetchRelated = async () => {
-      const allArticles = await getPublishedArticles();
-      const related = allArticles
-        .filter(a => a.category === article?.category && a.id !== article?.id)
-        .slice(0, 3);
-      setRelatedArticles(related);
+      try {
+        const allArticles = await getPublishedArticles();
+        const related = allArticles
+          .filter(a => a.category === article?.category && a.id !== article?.id)
+          .slice(0, 3);
+        setRelatedArticles(related);
+      } catch (err) {
+        console.error('Failed to load related articles:', err);
+      }
     };
 
     if (article) {
       fetchRelated();
     }
-  }, [article]);
+  }, [article?.id, article?.category]);
 
   if (isLoading) {
     return (
@@ -96,10 +105,17 @@ const ArticlePage = () => {
   }, [article?.videoUrl]);
 
   // Relaxed logic for "is video article"
-  const isVideoArticle = Boolean(article && (article.hasVideo || article.videoUrl) && article.videoUrl);
-  const articleContainerClass = `container mx-auto px-4 ${isVideoArticle ? 'mt-6 md:mt-8' : '-mt-20'} relative z-10`;
+  const isVideoArticle = useMemo(() => {
+    if (!article) return false;
+    return Boolean((article.hasVideo || article.videoUrl) && article.videoUrl);
+  }, [article]);
 
-  const youtubeId = isVideoArticle ? getYoutubeId(article.videoUrl!) : null;
+  const youtubeId = useMemo(() => {
+    if (!isVideoArticle || !article?.videoUrl) return null;
+    return getYoutubeId(article.videoUrl);
+  }, [isVideoArticle, article?.videoUrl]);
+
+  const articleContainerClass = `container mx-auto px-4 ${isVideoArticle ? 'mt-6 md:mt-8' : '-mt-20'} relative z-10`;
 
   return (
     <Layout>
@@ -173,7 +189,9 @@ const ArticlePage = () => {
               <div className="flex items-center gap-4 text-sm text-muted-foreground ml-auto">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(article.publishedAt, 'MMM d, yyyy')}
+                  {article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())
+                    ? format(article.publishedAt, 'MMM d, yyyy')
+                    : 'Recent'}
                 </span>
                 <span className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
