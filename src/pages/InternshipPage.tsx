@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,16 +28,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  defaultBenefits,
-  defaultDepartments,
-  defaultFAQs,
-  defaultPageContent,
+  getBenefits,
+  getDepartments,
+  getFAQs,
+  getPageContent,
+  submitApplication,
   type InternshipBenefit,
   type InternshipDepartment,
   type InternshipFAQ,
-  type InternshipPageContent
-} from '@/data/internshipData';
-import { saveApplication } from '@/lib/internshipService';
+  type InternshipPageContent,
+  DEFAULT_PAGE_CONTENT
+} from '@/lib/internshipService';
 
 // Icon component mapper
 const IconComponent = ({ iconName, className }: { iconName: string; className?: string }) => {
@@ -67,11 +68,27 @@ const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const InternshipPage = () => {
-  // In production, these would come from the database via Cloud
-  const [benefits] = useState<InternshipBenefit[]>(defaultBenefits);
-  const [departments] = useState<InternshipDepartment[]>(defaultDepartments);
-  const [faqs] = useState<InternshipFAQ[]>(defaultFAQs);
-  const [pageContent] = useState<InternshipPageContent>(defaultPageContent);
+  // Load from Supabase DB
+  const [benefits, setBenefits] = useState<InternshipBenefit[]>([]);
+  const [departments, setDepartments] = useState<InternshipDepartment[]>([]);
+  const [faqs, setFaqs] = useState<InternshipFAQ[]>([]);
+  const [pageContent, setPageContent] = useState<InternshipPageContent>(DEFAULT_PAGE_CONTENT);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [bens, depts, fqs, content] = await Promise.all([
+        getBenefits(),
+        getDepartments(),
+        getFAQs(),
+        getPageContent()
+      ]);
+      setBenefits(bens);
+      setDepartments(depts);
+      setFaqs(fqs);
+      setPageContent(content);
+    };
+    loadData();
+  }, []);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -127,15 +144,16 @@ const InternshipPage = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      saveApplication({
-        fullName: formData.fullName,
+      await submitApplication({
+        full_name: formData.fullName,
         email: formData.email,
         phone: formData.phone,
         university: formData.university,
         department: formData.department,
         portfolio: formData.portfolio,
-        coverLetter: formData.coverLetter,
-        cvFileName: cvFile ? cvFile.name : 'unknown.pdf'
+        cover_letter: formData.coverLetter,
+        cv_file_name: cvFile ? cvFile.name : undefined,
+        cv_url: undefined
       });
 
       toast.success('Application submitted successfully! We will contact you soon.');
@@ -198,11 +216,11 @@ const InternshipPage = () => {
           </p>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {benefits.sort((a, b) => a.order - b.order).map((benefit) => (
+            {benefits.sort((a, b) => a.sort_order - b.sort_order).map((benefit) => (
               <Card key={benefit.id} className="bg-card border-border hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <IconComponent iconName={benefit.iconName} className="h-6 w-6 text-primary" />
+                    <IconComponent iconName={benefit.icon_name} className="h-6 w-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg">{benefit.title}</CardTitle>
                 </CardHeader>
@@ -223,10 +241,10 @@ const InternshipPage = () => {
           </h2>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {departments.sort((a, b) => a.order - b.order).map((dept) => (
+            {departments.sort((a, b) => a.sort_order - b.sort_order).map((dept) => (
               <div key={dept.id} className="text-center p-6 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
                 <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <IconComponent iconName={dept.iconName} className="h-8 w-8 text-primary" />
+                  <IconComponent iconName={dept.icon_name} className="h-8 w-8 text-primary" />
                 </div>
                 <h3 className="font-display font-semibold text-foreground mb-2">{dept.name}</h3>
                 <p className="text-sm text-muted-foreground">{dept.description}</p>
@@ -425,7 +443,7 @@ const InternshipPage = () => {
           </h2>
 
           <div className="max-w-3xl mx-auto space-y-4">
-            {faqs.sort((a, b) => a.order - b.order).map((faq) => (
+            {faqs.sort((a, b) => a.sort_order - b.sort_order).map((faq) => (
               <div key={faq.id} className="rounded-xl bg-card border border-border p-6">
                 <h3 className="font-display font-semibold text-foreground mb-2">{faq.question}</h3>
                 <p className="text-muted-foreground">{faq.answer}</p>

@@ -11,8 +11,8 @@ const CareersPage = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
 
   useEffect(() => {
-    const loadJobs = () => {
-      const data = getJobs();
+    const loadJobs = async () => {
+      const data = await getJobs();
       // Only show open jobs on frontend
       setJobs(data.filter(j => j.isOpen));
     };

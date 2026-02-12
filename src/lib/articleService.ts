@@ -82,12 +82,8 @@ export const saveArticles = async (_articles: Article[]) => {
     console.warn('saveArticles (bulk) is deprecated. Use upsertArticle instead.');
 };
 
-// Map frontend status to DB-compatible status
+// Map frontend status to DB — DB status column is TEXT, no constraint
 const mapStatusForDb = (status: string): string => {
-    // DB only allows: 'draft', 'published', 'scheduled'
-    if (status === 'pending_review' || status === 'rejected') {
-        return 'draft';
-    }
     return status || 'draft';
 };
 

@@ -19,31 +19,43 @@ const AdminInternships = () => {
     const [selectedApp, setSelectedApp] = useState<InternshipApplication | null>(null);
 
     useEffect(() => {
-        const loadData = () => {
-            setApplications(getApplications());
+        const loadData = async () => {
+            const data = await getApplications();
+            setApplications(data);
         };
         loadData();
-        window.addEventListener('internshipApplicationsUpdated', loadData);
-        return () => window.removeEventListener('internshipApplicationsUpdated', loadData);
+        const refresh = () => { loadData(); };
+        window.addEventListener('internshipApplicationsUpdated', refresh);
+        return () => window.removeEventListener('internshipApplicationsUpdated', refresh);
     }, []);
 
-    const handleStatusUpdate = (id: string, status: InternshipApplication['status']) => {
-        updateApplicationStatus(id, status);
-        if (selectedApp) setSelectedApp({ ...selectedApp, status });
-        toast.success(`Application status marked as ${status}`);
+    const handleStatusUpdate = async (id: string, status: InternshipApplication['status']) => {
+        try {
+            await updateApplicationStatus(id, status);
+            setApplications(prev => prev.map(app => app.id === id ? { ...app, status } : app));
+            if (selectedApp) setSelectedApp({ ...selectedApp, status });
+            toast.success(`Application status marked as ${status}`);
+        } catch (err) {
+            toast.error('Failed to update status');
+        }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this application?')) {
-            deleteApplication(id);
-            setSelectedApp(null);
-            toast.success('Application deleted');
+            try {
+                await deleteApplication(id);
+                setApplications(prev => prev.filter(app => app.id !== id));
+                setSelectedApp(null);
+                toast.success('Application deleted');
+            } catch (err) {
+                toast.error('Failed to delete application');
+            }
         }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'accepted': return 'bg-green-500';
+            case 'shortlisted': return 'bg-green-500';
             case 'rejected': return 'bg-red-500';
             case 'reviewed': return 'bg-blue-500';
             default: return 'bg-yellow-500';
@@ -81,10 +93,10 @@ const AdminInternships = () => {
                                         {app.status}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(app.submittedAt, { addSuffix: true })}
+                                        {formatDistanceToNow(new Date(app.submitted_at), { addSuffix: true })}
                                     </span>
                                 </div>
-                                <CardTitle className="text-lg mt-2">{app.fullName}</CardTitle>
+                                <CardTitle className="text-lg mt-2">{app.full_name}</CardTitle>
                                 <CardDescription>{app.department} Department</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2 text-sm">
@@ -110,10 +122,10 @@ const AdminInternships = () => {
                             <DialogHeader>
                                 <div className="flex items-center gap-3">
                                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                                        {selectedApp.fullName.charAt(0)}
+                                        {selectedApp.full_name.charAt(0)}
                                     </div>
                                     <div>
-                                        <DialogTitle className="text-xl">{selectedApp.fullName}</DialogTitle>
+                                        <DialogTitle className="text-xl">{selectedApp.full_name}</DialogTitle>
                                         <DialogDescription>{selectedApp.university}</DialogDescription>
                                     </div>
                                 </div>
@@ -130,7 +142,7 @@ const AdminInternships = () => {
                                         <label className="text-xs font-medium text-muted-foreground uppercase">Application Info</label>
                                         <div className="flex items-center gap-2"><Badge variant="outline">{selectedApp.department}</Badge></div>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Calendar className="h-4 w-4" /> Submitted {format(selectedApp.submittedAt, 'PP')}
+                                            <Calendar className="h-4 w-4" /> Submitted {format(new Date(selectedApp.submitted_at), 'PP')}
                                         </div>
                                     </div>
                                 </div>
@@ -138,7 +150,7 @@ const AdminInternships = () => {
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground uppercase">Cover Letter</label>
                                     <div className="bg-muted/30 p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
-                                        {selectedApp.coverLetter}
+                                        {selectedApp.cover_letter}
                                     </div>
                                 </div>
 
@@ -154,7 +166,7 @@ const AdminInternships = () => {
                                     <div className="flex-1 space-y-1">
                                         <label className="text-xs font-medium text-muted-foreground uppercase">Resume / CV</label>
                                         <div className="flex items-center gap-2 text-sm font-medium">
-                                            <FileText className="h-4 w-4" /> {selectedApp.cvFileName}
+                                            <FileText className="h-4 w-4" /> {selectedApp.cv_file_name || 'Not provided'}
                                         </div>
                                     </div>
                                 </div>
@@ -164,8 +176,8 @@ const AdminInternships = () => {
                                         <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(selectedApp.id, 'reviewed')} disabled={selectedApp.status === 'reviewed'}>
                                             <Clock className="w-4 h-4 mr-2" /> Mark Reviewed
                                         </Button>
-                                        <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(selectedApp.id, 'accepted')} disabled={selectedApp.status === 'accepted'}>
-                                            <CheckCircle className="w-4 h-4 mr-2" /> Accept
+                                        <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(selectedApp.id, 'shortlisted')} disabled={selectedApp.status === 'shortlisted'}>
+                                            <CheckCircle className="w-4 h-4 mr-2" /> Shortlist
                                         </Button>
                                         <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleStatusUpdate(selectedApp.id, 'rejected')} disabled={selectedApp.status === 'rejected'}>
                                             <XCircle className="w-4 h-4 mr-2" /> Reject

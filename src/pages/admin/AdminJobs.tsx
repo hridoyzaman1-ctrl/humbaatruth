@@ -36,7 +36,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTouchSortable } from '@/hooks/useTouchSortable';
 import { cn } from '@/lib/utils';
-import { getJobs, saveJobs } from '@/lib/jobService';
+import { getJobs, saveJobs, addJob, updateJob, deleteJob } from '@/lib/jobService';
 
 // Draggable Job Card Component
 const DraggableJobCard = ({ job, onToggleStatus, onEdit, onDelete }: {
@@ -153,7 +153,15 @@ const AdminJobs = () => {
 
   // Load jobs on mount
   useEffect(() => {
-    setJobsList(getJobs());
+    const loadJobs = async () => {
+      const data = await getJobs();
+      setJobsList(data);
+    };
+    loadJobs();
+
+    const handleUpdate = () => { loadJobs(); };
+    window.addEventListener('jobsUpdated', handleUpdate);
+    return () => window.removeEventListener('jobsUpdated', handleUpdate);
   }, []);
 
   const openCreateDialog = () => {
@@ -184,73 +192,74 @@ const AdminJobs = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const requirements = formData.requirements.split('\n').filter(r => r.trim());
 
-    let updatedList: Job[];
-    if (editingJob) {
-      updatedList = jobsList.map(job =>
-        job.id === editingJob.id
-          ? {
-            ...job,
-            title: formData.title,
-            department: formData.department,
-            type: formData.type,
-            description: formData.description,
-            requirements,
-            deadline: new Date(formData.deadline),
-            isOpen: formData.isOpen
-          }
-          : job
-      );
-      toast.success('Job updated successfully!');
-    } else {
-      const newJob: Job = {
-        id: Date.now().toString(),
-        title: formData.title,
-        department: formData.department,
-        type: formData.type,
-        description: formData.description,
-        requirements,
-        deadline: new Date(formData.deadline),
-        isOpen: formData.isOpen,
-        createdAt: new Date()
-      };
-      updatedList = [newJob, ...jobsList];
-      toast.success('Job created successfully!');
+    try {
+      if (editingJob) {
+        await updateJob(editingJob.id, {
+          title: formData.title,
+          department: formData.department,
+          type: formData.type,
+          description: formData.description,
+          requirements,
+          deadline: new Date(formData.deadline),
+          isOpen: formData.isOpen
+        });
+        toast.success('Job updated successfully!');
+      } else {
+        await addJob({
+          title: formData.title,
+          department: formData.department,
+          type: formData.type,
+          description: formData.description,
+          requirements,
+          deadline: new Date(formData.deadline),
+          isOpen: formData.isOpen
+        });
+        toast.success('Job created successfully!');
+      }
+      // Reload from DB
+      const data = await getJobs();
+      setJobsList(data);
+      setIsDialogOpen(false);
+    } catch (err) {
+      toast.error('Failed to save job');
     }
-
-    setJobsList(updatedList);
-    saveJobs(updatedList);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this job?')) {
-      const updatedList = jobsList.filter(job => job.id !== id);
-      setJobsList(updatedList);
-      saveJobs(updatedList);
-      toast.success('Job deleted successfully!');
+      try {
+        await deleteJob(id);
+        setJobsList(prev => prev.filter(job => job.id !== id));
+        toast.success('Job deleted successfully!');
+      } catch (err) {
+        toast.error('Failed to delete job');
+      }
     }
   };
 
-  const toggleJobStatus = (id: string) => {
-    const updatedList = jobsList.map(job =>
-      job.id === id ? { ...job, isOpen: !job.isOpen } : job
-    );
-    setJobsList(updatedList);
-    saveJobs(updatedList);
-    toast.success('Job status updated!');
+  const toggleJobStatus = async (id: string) => {
+    const job = jobsList.find(j => j.id === id);
+    if (!job) return;
+    try {
+      await updateJob(id, { isOpen: !job.isOpen });
+      setJobsList(prev => prev.map(j => j.id === id ? { ...j, isOpen: !j.isOpen } : j));
+      toast.success('Job status updated!');
+    } catch (err) {
+      toast.error('Failed to update status');
+    }
   };
 
   // Drag-and-drop for jobs reordering
   const jobsSortable = useTouchSortable({
     items: jobsList,
     getItemId: (job) => job.id,
-    onReorder: (newJobs) => {
+    onReorder: async (newJobs) => {
       setJobsList(newJobs);
-      saveJobs(newJobs);
+      await saveJobs(newJobs);
       toast.success('Job order updated');
     },
   });

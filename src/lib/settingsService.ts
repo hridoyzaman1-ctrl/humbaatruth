@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import { MenuItem } from '@/types/news';
 
+// Editorial Settings Types
+export interface EditorialSettings {
+    showEditorialSection: boolean;
+    maxEditorials: number;
+    editorialIds: string[];
+}
+
 // Featured Settings Types
 export interface FeaturedSettings {
     breakingNewsIds: string[];
@@ -82,6 +89,26 @@ export const saveFeaturedSettings = async (settings: FeaturedSettings) => {
         .update({ hero_settings: settings })
         .eq('id', 1);
     window.dispatchEvent(new Event('featuredSettingsUpdated'));
+};
+
+// --- Editorial Settings ---
+const DEFAULT_EDITORIAL: EditorialSettings = {
+    showEditorialSection: true,
+    maxEditorials: 4,
+    editorialIds: []
+};
+
+export const getEditorialSettings = async (): Promise<EditorialSettings> => {
+    const data = await getSiteData();
+    return data?.editorial_settings ? { ...DEFAULT_EDITORIAL, ...data.editorial_settings } : DEFAULT_EDITORIAL;
+};
+
+export const saveEditorialSettings = async (settings: EditorialSettings) => {
+    await supabase
+        .from('site_settings')
+        .update({ editorial_settings: settings })
+        .eq('id', 1);
+    window.dispatchEvent(new Event('editorialSettingsUpdated'));
 };
 
 // --- Sections Settings ---
@@ -188,6 +215,7 @@ export const saveContactInfo = async (info: ContactInfoConfig) => {
         .from('site_settings')
         .update({ contact_info: info })
         .eq('id', 1);
+    window.dispatchEvent(new Event('contactInfoUpdated'));
 };
 
 
