@@ -66,8 +66,12 @@ const DraggableSectionCard = ({ section, onToggle, onToggleHomepage, onUpdateMax
     transition,
   };
 
-  const sectionArticles = section.category
+  // Show all articles, but category-matching ones first
+  const categoryArticles = section.category
     ? availableArticles.filter(a => a.category === section.category)
+    : [];
+  const otherArticles = section.category
+    ? availableArticles.filter(a => a.category !== section.category)
     : availableArticles;
 
   return (
@@ -176,17 +180,47 @@ const DraggableSectionCard = ({ section, onToggle, onToggleHomepage, onUpdateMax
                   <SelectValue placeholder="Add article..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {sectionArticles
-                    .filter(a => !section.selectedArticleIds.includes(a.id))
-                    .slice(0, 20)
-                    .map((article) => (
-                      <SelectItem key={article.id} value={article.id}>
-                        <span className="truncate">
-                          {article.title}
-                          {article.status !== 'published' && <span className="text-xs text-muted-foreground ml-2">({article.status})</span>}
-                        </span>
+                  {/* Show category-matching articles first */}
+                  {section.category && categoryArticles.filter(a => !section.selectedArticleIds.includes(a.id)).length > 0 && (
+                    <>
+                      <SelectItem value="__header_cat__" disabled className="text-xs font-bold text-primary opacity-100">
+                        ── {section.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} ──
                       </SelectItem>
-                    ))}
+                      {categoryArticles
+                        .filter(a => !section.selectedArticleIds.includes(a.id))
+                        .slice(0, 20)
+                        .map((article) => (
+                          <SelectItem key={article.id} value={article.id}>
+                            <span className="truncate">
+                              {article.title}
+                              {article.status !== 'published' && <span className="text-xs text-muted-foreground ml-2">({article.status})</span>}
+                            </span>
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
+                  {/* Show all other articles */}
+                  {otherArticles.filter(a => !section.selectedArticleIds.includes(a.id)).length > 0 && (
+                    <>
+                      {section.category && (
+                        <SelectItem value="__header_other__" disabled className="text-xs font-bold text-muted-foreground opacity-100">
+                          ── All Other Articles ──
+                        </SelectItem>
+                      )}
+                      {otherArticles
+                        .filter(a => !section.selectedArticleIds.includes(a.id))
+                        .slice(0, 30)
+                        .map((article) => (
+                          <SelectItem key={article.id} value={article.id}>
+                            <span className="truncate">
+                              {article.title}
+                              <span className="text-xs text-muted-foreground ml-2">({article.category})</span>
+                              {article.status !== 'published' && <span className="text-xs text-muted-foreground ml-1">• {article.status}</span>}
+                            </span>
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             )}
