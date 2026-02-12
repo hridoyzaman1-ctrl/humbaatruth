@@ -39,7 +39,7 @@ const AdminDashboard = () => {
   // Stats for full dashboard (admin/editor)
   const fullStats = [
     { label: 'Total Articles', value: articlesList.length, icon: FileText, color: 'bg-blue-500' },
-    { label: 'Total Views', value: articlesList.reduce((a, b) => a + b.views, 0).toLocaleString(), icon: Eye, color: 'bg-green-500' },
+    { label: 'Total Views', value: articlesList.reduce((a, b) => a + (b.views || 0), 0).toLocaleString(), icon: Eye, color: 'bg-green-500' },
     { label: 'Authors', value: '4', icon: Users, color: 'bg-purple-500' },
     { label: 'Breaking News', value: articlesList.filter(a => a.isBreaking).length, icon: TrendingUp, color: 'bg-red-500' },
   ];
@@ -123,7 +123,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Eye className="h-3 w-3" />
-                      {article.views.toLocaleString()}
+                      {(article.views || 0).toLocaleString()}
                     </span>
                     <span>•</span>
                     <span>{article.publishedAt instanceof Date && !isNaN(article.publishedAt.getTime())

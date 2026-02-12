@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from './ArticleCard';
 
@@ -7,7 +7,7 @@ export const LatestNews = () => {
   const [articlesList, setArticlesList] = useState<Article[]>([]);
 
   const fetchArticles = async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setArticlesList(data);
   };
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { getArticleBySlug, getArticles, incrementArticleViews } from '@/lib/articleService';
+import { getArticleBySlug, getPublishedArticles, incrementArticleViews } from '@/lib/articleService';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Eye, Share2, Facebook, Twitter, Linkedin, Mail, Link2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ const ArticlePage = () => {
 
   useEffect(() => {
     const fetchRelated = async () => {
-      const allArticles = await getArticles();
+      const allArticles = await getPublishedArticles();
       const related = allArticles
         .filter(a => a.category === article?.category && a.id !== article?.id)
         .slice(0, 3);
@@ -142,7 +142,7 @@ const ArticlePage = () => {
           <div className="bg-card rounded-xl p-6 md:p-8 shadow-lg">
             <div className="flex items-center gap-3 mb-4">
               <Badge className="bg-primary text-primary-foreground">
-                {article.category.replace('-', ' ')}
+                {(article.category || 'news').replace('-', ' ')}
               </Badge>
               {article.isBreaking && (
                 <Badge className="bg-accent text-accent-foreground">Breaking</Badge>
@@ -160,13 +160,13 @@ const ArticlePage = () => {
             <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={article.author.avatar}
-                  alt={article.author.name}
+                  src={article.author?.avatar || ''}
+                  alt={article.customAuthor || article.author?.name || 'Author'}
                   className="h-10 w-10 rounded-full object-cover"
                 />
                 <div>
-                  <p className="font-medium text-foreground">{article.customAuthor || article.author.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{article.customAuthor ? 'Contributor' : article.author.role}</p>
+                  <p className="font-medium text-foreground">{article.customAuthor || article.author?.name || 'Staff'}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{article.customAuthor ? 'Contributor' : (article.author?.role || 'author')}</p>
                 </div>
               </div>
 
@@ -177,7 +177,7 @@ const ArticlePage = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
-                  {article.views.toLocaleString()}
+                  {(article.views || 0).toLocaleString()}
                 </span>
               </div>
             </div>

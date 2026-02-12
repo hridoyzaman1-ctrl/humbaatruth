@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { categories as initialCategories } from '@/data/mockData';
+import { fetchCategories, invalidateCategoryCache, CategoryItem } from '@/lib/categoryUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,25 +17,24 @@ import { Category } from '@/types/news';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { getCategories, saveCategories } from '@/lib/settingsService';
 
-interface CategoryItem {
-  id: Category;
+interface CategoryListItem {
+  id: string;
   name: string;
   description: string;
 }
 
 const AdminCategories = () => {
   const { hasPermission } = useAdminAuth();
-  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>(initialCategories as CategoryItem[]);
+  const [categoriesList, setCategoriesList] = useState<CategoryListItem[]>([]);
 
-  // Load categories from Supabase on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      const data = await getCategories();
+    const loadCategories = async () => {
+      const data = await fetchCategories();
       if (data && data.length > 0) {
-        setCategoriesList(data as CategoryItem[]);
+        setCategoriesList(data as CategoryListItem[]);
       }
     };
-    fetchCategories();
+    loadCategories();
   }, []);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,8 +88,8 @@ const AdminCategories = () => {
       );
       toast.success('Category updated successfully!');
     } else {
-      const newCategory: CategoryItem = {
-        id: formData.name.toLowerCase().replace(/\s+/g, '-') as Category,
+      const newCategory: CategoryListItem = {
+        id: formData.name.toLowerCase().replace(/\s+/g, '-'),
         name: formData.name,
         description: formData.description
       };
@@ -99,7 +98,8 @@ const AdminCategories = () => {
     }
 
     setCategoriesList(updatedList);
-    saveCategories(updatedList as CategoryConfig[]);
+    saveCategories(updatedList as any[]);
+    invalidateCategoryCache();
     setIsDialogOpen(false);
   };
 
@@ -108,6 +108,7 @@ const AdminCategories = () => {
       const updatedList = categoriesList.filter(cat => cat.id !== id);
       setCategoriesList(updatedList);
       saveCategories(updatedList);
+      invalidateCategoryCache();
       toast.success('Category deleted successfully!');
     }
   };

@@ -288,7 +288,7 @@ const AdminEditorial = () => {
                       />
                       <div className="flex-1">
                         <p className="text-sm font-medium">{article.title}</p>
-                        <p className="text-xs text-muted-foreground">By {article.author.name}</p>
+                        <p className="text-xs text-muted-foreground">By {article.customAuthor || article.author?.name || 'Staff'}</p>
                       </div>
                     </div>
                   ))}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, ThumbsUp, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { formatDistanceToNow } from 'date-fns';
 
 // Mock comments data linked to real articles
@@ -54,7 +54,7 @@ export const HomepageComments = () => {
 
   useEffect(() => {
     const fetchArticles = async () => {
-      const data = await getArticles();
+      const data = await getPublishedArticles();
       setArticles(data);
     };
     fetchArticles();

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from '@/components/news/ArticleCard';
 import { ArticleCardSkeleton } from '@/components/ui/skeletons';
@@ -66,7 +66,7 @@ const SearchPage = () => {
   // Load articles
   useEffect(() => {
     const fetchArticles = async () => {
-      const data = await getArticles();
+      const data = await getPublishedArticles();
       setArticlesList(data);
     };
     fetchArticles();
@@ -90,7 +90,7 @@ const SearchPage = () => {
         article.excerpt.toLowerCase().includes(searchTerm) ||
         article.content.toLowerCase().includes(searchTerm) ||
         article.category.toLowerCase().includes(searchTerm) ||
-        article.author.name.toLowerCase().includes(searchTerm) ||
+        (article.author?.name || '').toLowerCase().includes(searchTerm) ||
         article.tags.some(tag => tag.toLowerCase().includes(searchTerm))
       );
     }
@@ -125,7 +125,7 @@ const SearchPage = () => {
         results.sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
         break;
       case 'popular':
-        results.sort((a, b) => b.views - a.views);
+        results.sort((a, b) => (b.views || 0) - (a.views || 0));
         break;
       case 'az':
         results.sort((a, b) => a.title.localeCompare(b.title));

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { FeaturedSettings, getFeaturedSettings, saveFeaturedSettings } from '@/lib/settingsService';
+import { getCategoryColor } from '@/lib/categoryUtils';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -236,18 +237,9 @@ const AdminFeatured = () => {
     toast.success('Featured settings saved successfully');
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      national: 'bg-blue-500',
-      international: 'bg-purple-500',
-      economy: 'bg-amber-500',
-      environment: 'bg-emerald-500',
-      technology: 'bg-cyan-500',
-      sports: 'bg-green-500',
-      entertainment: 'bg-fuchsia-500',
-    };
-    return colors[category] || 'bg-primary';
-  };
+
+  // getCategoryColor is imported from @/lib/categoryUtils
+
 
   // Breaking News drag-and-drop
   const breakingSortable = useTouchSortable({

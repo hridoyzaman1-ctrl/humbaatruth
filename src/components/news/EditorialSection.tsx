@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from './ArticleCard';
 import { Newspaper, Pen } from 'lucide-react';
@@ -18,7 +18,7 @@ export const EditorialSection = () => {
   const [sections, setSections] = useState<any[]>(defaultSections);
 
   const fetchData = useCallback(async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setArticlesList(data);
     const settings = await getSectionsSettings(defaultSections);
     setSections(settings);
@@ -116,14 +116,14 @@ export const EditorialSection = () => {
               >
                 <div className="flex-shrink-0">
                   <img
-                    src={article.author.avatar}
-                    alt={article.author.name}
+                    src={article.author?.avatar || ''}
+                    alt={article.customAuthor || article.author?.name || 'Staff'}
                     className="h-12 w-12 rounded-full object-cover"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">
-                    {article.author.name} • {article.author.role}
+                    {article.customAuthor || article.author?.name || 'Staff'} • {article.author?.role || 'author'}
                   </p>
                   <h4 className="font-display font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                     {article.title}

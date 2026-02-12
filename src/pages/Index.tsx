@@ -10,7 +10,7 @@ import { VideoSection } from '@/components/news/VideoSection';
 import { NewsletterSignup } from '@/components/news/NewsletterSignup';
 import { InternshipBanner } from '@/components/news/InternshipBanner';
 import { HomepageComments } from '@/components/news/HomepageComments';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { ArticleCard } from '@/components/news/ArticleCard';
 import { Article } from '@/types/news';
 
@@ -18,7 +18,7 @@ const Index = () => {
   const [currentArticles, setCurrentArticles] = useState<Article[]>([]);
 
   const fetchArticles = async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setCurrentArticles(data);
   };
 

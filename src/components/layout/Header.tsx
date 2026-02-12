@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Search, User, ChevronDown, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { headerMenuItems, categories, articles } from '@/data/mockData';
+import { headerMenuItems as defaultMenuItems } from '@/data/mockData';
+import { getMenuSettings } from '@/lib/settingsService';
+import { getPublishedArticles } from '@/lib/articleService';
+import { Article, MenuItem } from '@/types/news';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -37,7 +40,15 @@ export const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(defaultMenuItems);
+  const [articles, setArticles] = useState<Article[]>([]);
   const navigate = useNavigate();
+
+  // Load menu items from Supabase settings and articles for search
+  useEffect(() => {
+    getMenuSettings(defaultMenuItems).then(items => setMenuItems(items));
+    getPublishedArticles().then(a => setArticles(a));
+  }, []);
 
   // Update date at midnight
   useEffect(() => {
@@ -54,7 +65,7 @@ export const Header = () => {
     return () => clearTimeout(timer);
   }, [currentDate]);
 
-  const visibleMenuItems = headerMenuItems
+  const visibleMenuItems = menuItems
     .filter(item => item.isVisible)
     .sort((a, b) => a.order - b.order);
 
@@ -62,11 +73,11 @@ export const Header = () => {
   const mainNavItems = visibleMenuItems.filter(item => item.showInMainNav === true);
   const moreNavItems = visibleMenuItems.filter(item => item.showInMainNav !== true);
 
-  const formattedDate = currentDate.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const formattedDate = currentDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 
   return (
@@ -103,8 +114,8 @@ export const Header = () => {
           </Button>
 
           {/* Logo - Larger sizing with scroll to top */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="flex items-center"
             onClick={(e) => {
               // If already on homepage, scroll to top
@@ -114,10 +125,10 @@ export const Header = () => {
               }
             }}
           >
-            <img 
-              src={logo} 
-              alt="TruthLens" 
-              className="h-10 w-auto sm:h-12 md:h-14 lg:h-16 object-contain" 
+            <img
+              src={logo}
+              alt="TruthLens"
+              className="h-10 w-auto sm:h-12 md:h-14 lg:h-16 object-contain"
             />
           </Link>
 
@@ -127,17 +138,16 @@ export const Header = () => {
               <Link
                 key={item.id}
                 to={item.path}
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1 ${
-                  item.highlight 
-                    ? 'font-semibold text-primary hover:text-primary/80' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1 ${item.highlight
+                  ? 'font-semibold text-primary hover:text-primary/80'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 {item.icon && <span>{item.icon}</span>}
                 {item.label}
               </Link>
             ))}
-            
+
             {/* More Dropdown */}
             {moreNavItems.length > 0 && (
               <DropdownMenu>
@@ -152,9 +162,8 @@ export const Header = () => {
                     <DropdownMenuItem key={item.id} asChild>
                       <Link
                         to={item.path}
-                        className={`w-full flex items-center gap-2 ${
-                          item.highlight ? 'font-semibold text-primary' : ''
-                        }`}
+                        className={`w-full flex items-center gap-2 ${item.highlight ? 'font-semibold text-primary' : ''
+                          }`}
                       >
                         {item.icon && <span>{item.icon}</span>}
                         {item.label}
@@ -205,12 +214,12 @@ export const Header = () => {
             className="border-t border-border overflow-hidden"
           >
             <div className="container mx-auto px-4 py-4">
-              <form 
+              <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (searchQuery.trim()) {
                     // Find matching articles
-                    const results = articles.filter(a => 
+                    const results = articles.filter(a =>
                       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       a.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -235,12 +244,12 @@ export const Header = () => {
                   autoFocus
                 />
               </form>
-              
+
               {/* Search Results Preview */}
               {searchQuery.trim() && (
                 <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
                   {articles
-                    .filter(a => 
+                    .filter(a =>
                       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       a.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -256,18 +265,18 @@ export const Header = () => {
                           setIsSearchOpen(false);
                         }}
                       >
-                        <img 
-                          src={article.featuredImage} 
+                        <img
+                          src={article.featuredImage}
                           alt={article.title}
                           className="h-12 w-16 object-cover rounded"
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{article.title}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{article.category.replace('-', ' ')}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{(article.category || 'news').replace('-', ' ')}</p>
                         </div>
                       </Link>
                     ))}
-                  
+
                   {/* View All Results Link */}
                   <Link
                     to={`/search?q=${encodeURIComponent(searchQuery)}`}
@@ -279,13 +288,13 @@ export const Header = () => {
                     <Search className="h-4 w-4" />
                     View all results for "{searchQuery}"
                   </Link>
-                  
-                  {articles.filter(a => 
+
+                  {articles.filter(a =>
                     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     a.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
                   ).length === 0 && (
-                    <p className="p-4 text-sm text-muted-foreground text-center">No articles found</p>
-                  )}
+                      <p className="p-4 text-sm text-muted-foreground text-center">No articles found</p>
+                    )}
                 </div>
               )}
             </div>
@@ -304,7 +313,7 @@ export const Header = () => {
           >
             {/* Overlay backdrop */}
             <div className="absolute inset-0 bg-black/20" onClick={() => setIsMenuOpen(false)} />
-            
+
             {/* Menu container with border and shadow */}
             <nav className="relative mx-3 my-2 flex flex-col bg-card border-2 border-border rounded-xl shadow-2xl max-h-[70vh] overflow-y-auto">
               {/* Date & Time Header with Live Clock */}
@@ -318,24 +327,23 @@ export const Header = () => {
                   <LiveClock />
                 </div>
               </div>
-              
+
               {/* Categories section */}
               <div className="px-4 pt-3 pb-2">
                 <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
                   Categories
                 </div>
               </div>
-              
+
               <div className="px-2">
                 {visibleMenuItems.map((item) => (
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`block mx-2 px-3 py-2.5 text-sm font-medium transition-colors rounded-lg flex items-center gap-2 ${
-                      item.highlight 
-                        ? 'text-primary font-semibold bg-primary/5 hover:bg-primary/10' 
-                        : 'text-foreground hover:bg-muted hover:text-primary'
-                    }`}
+                    className={`block mx-2 px-3 py-2.5 text-sm font-medium transition-colors rounded-lg flex items-center gap-2 ${item.highlight
+                      ? 'text-primary font-semibold bg-primary/5 hover:bg-primary/10'
+                      : 'text-foreground hover:bg-muted hover:text-primary'
+                      }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.icon && <span>{item.icon}</span>}
@@ -343,17 +351,17 @@ export const Header = () => {
                   </Link>
                 ))}
               </div>
-              
+
               {/* Divider */}
               <div className="mx-4 my-2 border-t border-border" />
-              
+
               {/* More section */}
               <div className="px-4 pb-1">
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                   More
                 </div>
               </div>
-              
+
               <div className="px-2 pb-3">
                 <Link
                   to="/about"

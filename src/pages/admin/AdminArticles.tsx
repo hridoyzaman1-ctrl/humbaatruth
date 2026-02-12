@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { categories } from '@/data/mockData';
+import { fetchCategories, CategoryItem } from '@/lib/categoryUtils';
 import { getArticles, upsertArticle, deleteArticle } from '@/lib/articleService';
 import { userService, ExtendedAdminUser } from '@/lib/userService';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ const AdminArticles = () => {
   // Load articles from service
   const [articlesList, setArticlesList] = useState<ExtendedArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [dbAuthors, setDbAuthors] = useState<ExtendedAdminUser[]>([]);
 
   useEffect(() => {
@@ -55,6 +56,8 @@ const AdminArticles = () => {
       setDbAuthors(authors);
     };
     loadAuthors();
+    // Load categories from Supabase
+    fetchCategories().then(cats => setCategories(cats));
   }, []);
 
   const fetchArticles = async () => {
@@ -131,7 +134,7 @@ const AdminArticles = () => {
 
   const filteredArticles = visibleArticles.filter(article => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.author.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (article.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || article.category === filterCategory;
     const matchesStatus = filterStatus === 'all' || article.status === filterStatus;
 
@@ -180,7 +183,7 @@ const AdminArticles = () => {
     // Permission Check:
     // 1. Admins/Editors (canEditAll) can edit ANY article (published or not, any author).
     // 2. Authors/Journalists can only edit their OWN articles.
-    const isOwner = article.submittedBy === currentUser?.id || article.author.id === currentUser?.id;
+    const isOwner = article.submittedBy === currentUser?.id || article.author?.id === currentUser?.id;
 
     if (!canEditAll && !isOwner) {
       toast.error('You can only edit your own articles');
@@ -204,7 +207,7 @@ const AdminArticles = () => {
       status: article.status,
       publishedAt: article.publishedAt,
       reviewNote: article.reviewNote || '',
-      authorId: article.author.id,
+      authorId: article.author?.id || '',
       manualAuthorName: article.customAuthor || '',
       isManualAuthor: !!article.customAuthor
     });
@@ -366,7 +369,7 @@ const AdminArticles = () => {
     if (!article) return;
 
     // Check permissions
-    if (!canDeleteAll && article.submittedBy !== currentUser?.id && article.author.id !== currentUser?.id) {
+    if (!canDeleteAll && article.submittedBy !== currentUser?.id && article.author?.id !== currentUser?.id) {
       toast.error('You can only delete your own articles');
       return;
     }
@@ -555,7 +558,7 @@ const AdminArticles = () => {
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                    {article.views.toLocaleString()}
+                    {(article.views || 0).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
@@ -653,7 +656,7 @@ const AdminArticles = () => {
 
             <div className="flex items-center justify-between gap-2 pt-3 border-t border-border mt-2">
               <div className="text-xs text-muted-foreground">
-                {article.views.toLocaleString()} views
+                {(article.views || 0).toLocaleString()} views
               </div>
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild>

@@ -9,13 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { headerMenuItems as initialMenuItems, categories } from '@/data/mockData';
+import { headerMenuItems as initialMenuItems } from '@/data/mockData';
 import { MenuItem } from '@/types/news';
 import { toast } from 'sonner';
 import { getMenuSettings, saveMenuSettings } from '@/lib/settingsService';
+import { fetchCategories, CategoryItem } from '@/lib/categoryUtils';
 
 const AdminMenu = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -23,6 +25,7 @@ const AdminMenu = () => {
       setMenuItems(savedMenu);
     };
     loadSettings();
+    fetchCategories().then(cats => setCategories(cats));
   }, []);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({

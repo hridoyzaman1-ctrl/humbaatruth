@@ -1,13 +1,5 @@
-export type Category =
-  | 'national'
-  | 'international'
-  | 'economy'
-  | 'politics'
-  | 'sports'
-  | 'entertainment'
-  | 'technology'
-  | 'editorial'
-  | 'untold-stories';
+// Category is a dynamic string — new categories can be created via admin panel
+export type Category = string;
 
 export interface MenuItem {
   id: string;

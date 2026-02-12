@@ -1,9 +1,9 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { categories } from '@/data/mockData';
-import { getArticles } from '@/lib/articleService';
-import { Article, Category } from '@/types/news';
+import { fetchCategories, CategoryItem } from '@/lib/categoryUtils';
+import { getPublishedArticles } from '@/lib/articleService';
+import { Article } from '@/types/news';
 import { ArticleCard } from '@/components/news/ArticleCard';
 import { ArticleCardSkeleton } from '@/components/ui/skeletons';
 import { PaginationControls } from '@/components/ui/pagination-controls';
@@ -15,13 +15,25 @@ const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [articlesList, setArticlesList] = useState<Article[]>([]);
+  const [category, setCategory] = useState<CategoryItem | null>(null);
 
-  const category = categories.find(c => c.id === categoryId);
-  const categoryArticles = articlesList.filter(a => a.category === categoryId as Category);
+  const categoryArticles = articlesList.filter(a => a.category === categoryId);
+
+  useEffect(() => {
+    fetchCategories().then(cats => {
+      const found = cats.find(c => c.id === categoryId);
+      if (found) {
+        setCategory(found);
+      } else if (categoryId) {
+        // Fallback: create a display-friendly name from the URL slug
+        setCategory({ id: categoryId, name: categoryId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), description: '' });
+      }
+    });
+  }, [categoryId]);
 
   useEffect(() => {
     const fetchArticles = async () => {
-      const data = await getArticles();
+      const data = await getPublishedArticles();
       setArticlesList(data);
     };
     fetchArticles();

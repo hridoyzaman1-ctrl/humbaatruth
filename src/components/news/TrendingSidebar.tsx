@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from './ArticleCard';
 import { TrendingUp, Eye } from 'lucide-react';
@@ -18,7 +18,7 @@ export const TrendingSidebar = () => {
   const [sections, setSections] = useState(defaultSections);
 
   const fetchData = useCallback(async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setArticlesList(data);
     const settings = await getSectionsSettings(defaultSections);
     setSections(settings);
@@ -50,7 +50,7 @@ export const TrendingSidebar = () => {
   } else {
     // Fallback: sort by views
     trendingArticles = [...articlesList]
-      .sort((a, b) => b.views - a.views)
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 5);
   }
 

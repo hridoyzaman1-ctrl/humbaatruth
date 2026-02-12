@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { ArticleCard } from './ArticleCard';
 import { Category } from '@/types/news';
@@ -17,7 +17,7 @@ export const CategorySection = ({ category, title, showMore = true }: CategorySe
 
   useEffect(() => {
     const fetchArticles = async () => {
-      const data = await getArticles();
+      const data = await getPublishedArticles();
       setArticlesList(data);
     };
 

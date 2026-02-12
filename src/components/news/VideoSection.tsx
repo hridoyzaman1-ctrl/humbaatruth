@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { PlayCircle, Video, Clock, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,23 +7,7 @@ import { VideoPlayerModal } from './VideoPlayerModal';
 import { formatDistanceToNow } from 'date-fns';
 import { Article } from '@/types/news';
 import { getSectionsSettings } from '@/lib/settingsService';
-
-const getCategoryColor = (category: string) => {
-  const colors: Record<string, string> = {
-    national: 'bg-blue-500',
-    international: 'bg-purple-500',
-    economy: 'bg-amber-500',
-    environment: 'bg-emerald-500',
-    technology: 'bg-cyan-500',
-    culture: 'bg-pink-500',
-    editorial: 'bg-slate-500',
-    society: 'bg-orange-500',
-    'untold-stories': 'bg-red-600',
-    sports: 'bg-green-500',
-    entertainment: 'bg-fuchsia-500',
-  };
-  return colors[category] || 'bg-primary';
-};
+import { getCategoryColor } from '@/lib/categoryUtils';
 
 interface VideoCardProps {
   article: Article;
@@ -61,7 +45,7 @@ const VideoCard = ({ article, onPlay }: VideoCardProps) => {
           </div>
         </div>
         <Badge className={`absolute top-2 left-2 ${getCategoryColor(article.category)} text-white border-0 text-[10px]`}>
-          {article.category.replace('-', ' ')}
+          {(article.category || 'news').replace('-', ' ')}
         </Badge>
       </div>
       <div className="p-3 md:p-4">
@@ -75,7 +59,7 @@ const VideoCard = ({ article, onPlay }: VideoCardProps) => {
           </span>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3 flex-shrink-0" />
-            {article.views.toLocaleString()}
+            {(article.views || 0).toLocaleString()}
           </span>
         </div>
       </div>
@@ -91,7 +75,7 @@ export const VideoSection = () => {
   const [sections, setSections] = useState(defaultSections);
 
   const fetchData = useCallback(async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setArticlesList(data);
     const settings = await getSectionsSettings(defaultSections);
     setSections(settings);

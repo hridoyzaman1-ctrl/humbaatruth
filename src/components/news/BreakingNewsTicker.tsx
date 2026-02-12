@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { Button } from '@/components/ui/button';
 import { getFeaturedSettings } from '@/lib/settingsService';
@@ -29,7 +29,7 @@ export const BreakingNewsTicker = ({
   });
 
   const fetchData = useCallback(async () => {
-    const articles = await getArticles();
+    const articles = await getPublishedArticles();
     setArticlesList(articles);
     const featuredSettings = await getFeaturedSettings();
     if (featuredSettings) {
@@ -48,10 +48,17 @@ export const BreakingNewsTicker = ({
   }, [fetchData]);
 
   // Use settings for breaking news IDs
-  const breakingNews = (settings.breakingNewsIds || [])
+  const selectedBreakingNews = (settings.breakingNewsIds || [])
     .map(id => articlesList.find(a => a.id === id))
     .filter((a): a is Article => !!a)
     .slice(0, maxHeadlines);
+
+  // Fallback: if no breaking news IDs configured, use articles marked as breaking or latest articles
+  const breakingNews = selectedBreakingNews.length > 0
+    ? selectedBreakingNews
+    : articlesList.filter(a => a.isBreaking).length > 0
+      ? articlesList.filter(a => a.isBreaking).slice(0, maxHeadlines)
+      : articlesList.slice(0, maxHeadlines);
 
   const autoSwipeInterval = propInterval ?? settings.autoSwipeInterval ?? 5000;
 

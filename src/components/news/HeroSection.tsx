@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Eye, ChevronLeft, ChevronRight, Pause, Play, PlayCircle } from 'lucide-react';
-import { getArticles } from '@/lib/articleService';
+import { getPublishedArticles } from '@/lib/articleService';
 import { Article } from '@/types/news';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { getCategoryColor } from '@/lib/categoryUtils';
 import { getYoutubeThumbnail, FALLBACK_IMAGE } from '@/lib/videoUtils';
 
 import { getFeaturedSettings } from '@/lib/settingsService';
@@ -27,7 +28,7 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchArticles = useCallback(async () => {
-    const data = await getArticles();
+    const data = await getPublishedArticles();
     setArticlesList(data);
     const featuredSettings = await getFeaturedSettings();
     if (featuredSettings) {
@@ -57,11 +58,10 @@ export const HeroSection = () => {
     .map(id => articlesList.find(a => a.id === id))
     .filter((a): a is Article => !!a); // Filter out undefined if an article was deleted
 
-  // Fallback if no hero articles selected
-  if (featuredArticles.length === 0 && articlesList.length > 0) {
-    // Logic for fallback can stay or we just show nothing.
-    // The original code fell back to "articlesList.slice(0, 5)".
-  }
+  // Fallback if no hero articles selected — use latest published articles
+  const displayFeaturedArticles = featuredArticles.length > 0
+    ? featuredArticles
+    : articlesList.slice(0, settings.maxHeroArticles || 5);
 
   // Use settings for auto swipe
   const { heroAutoSwipe = true, autoSwipeInterval = 6000 } = settings;
@@ -70,19 +70,19 @@ export const HeroSection = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(heroAutoSwipe);
 
   const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % featuredArticles.length);
-  }, [featuredArticles.length]);
+    setCurrentIndex((prev) => (prev + 1) % displayFeaturedArticles.length);
+  }, [displayFeaturedArticles.length]);
 
   const goToPrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + featuredArticles.length) % featuredArticles.length);
-  }, [featuredArticles.length]);
+    setCurrentIndex((prev) => (prev - 1 + displayFeaturedArticles.length) % displayFeaturedArticles.length);
+  }, [displayFeaturedArticles.length]);
 
   useEffect(() => {
-    if (featuredArticles.length <= 1 || !isAutoPlaying) return;
+    if (displayFeaturedArticles.length <= 1 || !isAutoPlaying) return;
 
     const interval = setInterval(goToNext, autoSwipeInterval);
     return () => clearInterval(interval);
-  }, [featuredArticles.length, isAutoPlaying, goToNext, autoSwipeInterval]);
+  }, [displayFeaturedArticles.length, isAutoPlaying, goToNext, autoSwipeInterval]);
 
   // Define sideArticles: Use settings.heroSideArticleIds or fallback
   const sideArticles = (settings.heroSideArticleIds || [])
@@ -93,7 +93,7 @@ export const HeroSection = () => {
   // Fallback if no side articles configured
   const displaySideArticles = sideArticles.length > 0
     ? sideArticles
-    : articlesList.filter(a => !settings.heroFeaturedIds.includes(a.id)).slice(0, 4);
+    : articlesList.filter(a => !(settings.heroFeaturedIds || []).includes(a.id)).slice(0, 4);
 
   const getDisplayImage = (article: Article) => {
     if (article.featuredImage) return article.featuredImage;
@@ -104,7 +104,7 @@ export const HeroSection = () => {
     return FALLBACK_IMAGE;
   };
 
-  if (featuredArticles.length === 0 && !isLoading) return null;
+  if (displayFeaturedArticles.length === 0 && !isLoading) return null;
 
   // Loading skeleton
   if (isLoading) {
@@ -149,24 +149,7 @@ export const HeroSection = () => {
     );
   }
 
-  const currentArticle = featuredArticles[currentIndex];
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      national: 'bg-blue-500',
-      international: 'bg-purple-500',
-      economy: 'bg-amber-500',
-      environment: 'bg-emerald-500',
-      technology: 'bg-cyan-500',
-      culture: 'bg-pink-500',
-      editorial: 'bg-slate-500',
-      society: 'bg-orange-500',
-      'untold-stories': 'bg-red-600',
-      sports: 'bg-green-500',
-      entertainment: 'bg-fuchsia-500',
-    };
-    return colors[category] || 'bg-primary';
-  };
+  const currentArticle = displayFeaturedArticles[currentIndex];
 
   return (
     <section className="py-6 md:py-8">
@@ -222,9 +205,9 @@ export const HeroSection = () => {
                         </span>
                         <span className="hidden sm:flex items-center gap-1">
                           <Eye className="h-3 w-3" />
-                          {currentArticle.views.toLocaleString()} views
+                          {(currentArticle.views || 0).toLocaleString()} views
                         </span>
-                        <span className="hidden md:inline">By {currentArticle.author.name}</span>
+                        <span className="hidden md:inline">By {currentArticle.customAuthor || currentArticle.author?.name || 'Staff'}</span>
                       </div>
                     </div>
                   </Link>
@@ -232,7 +215,7 @@ export const HeroSection = () => {
               </AnimatePresence>
 
               {/* Navigation Controls */}
-              {featuredArticles.length > 1 && (
+              {displayFeaturedArticles.length > 1 && (
                 <>
                   {/* Arrows */}
                   <Button
@@ -256,7 +239,7 @@ export const HeroSection = () => {
                   <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-2">
                     {/* Dots */}
                     <div className="flex gap-1.5">
-                      {featuredArticles.map((_, idx) => (
+                      {displayFeaturedArticles.map((_, idx) => (
                         <button
                           key={idx}
                           onClick={() => setCurrentIndex(idx)}
@@ -282,7 +265,7 @@ export const HeroSection = () => {
                   {/* Slide Counter */}
                   <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
                     <span className="text-xs text-white font-medium">
-                      {currentIndex + 1} / {featuredArticles.length}
+                      {currentIndex + 1} / {displayFeaturedArticles.length}
                     </span>
                   </div>
                 </>
@@ -319,7 +302,7 @@ export const HeroSection = () => {
                   </div>
                   <div className="flex flex-col justify-center flex-1 min-w-0">
                     <Badge variant="outline" className={`mb-1 w-fit text-[10px] ${getCategoryColor(article.category)} text-white border-0`}>
-                      {article.category.replace('-', ' ')}
+                      {(article.category || 'news').replace('-', ' ')}
                     </Badge>
                     <h3 className="line-clamp-2 font-display text-sm font-semibold text-foreground md:text-sm group-hover:text-primary transition-colors">
                       {article.title}

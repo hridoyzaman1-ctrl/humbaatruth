@@ -25,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTouchSortable } from '@/hooks/useTouchSortable';
 import { cn } from '@/lib/utils';
 import { getSectionsSettings, saveSectionsSettings, SectionConfig } from '@/lib/settingsService';
+import { getCategoryColor } from '@/lib/categoryUtils';
 
 const defaultSections: SectionConfig[] = [
   { id: 'breaking-news', name: 'Breaking News Ticker', icon: <Newspaper className="h-4 w-4" />, enabled: true, order: 1, maxArticles: 5, selectedArticleIds: ['1', '2', '5'], showOnHomepage: true },
@@ -242,22 +243,9 @@ const AdminSections = () => {
   // Allow all articles except rejected
   const availableArticles = articlesList.filter(a => (a.status as string) !== 'rejected');
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      national: 'bg-blue-500',
-      international: 'bg-purple-500',
-      economy: 'bg-amber-500',
-      environment: 'bg-emerald-500',
-      technology: 'bg-cyan-500',
-      culture: 'bg-pink-500',
-      editorial: 'bg-slate-500',
-      society: 'bg-orange-500',
-      'untold-stories': 'bg-red-600',
-      sports: 'bg-green-500',
-      entertainment: 'bg-fuchsia-500',
-    };
-    return colors[category] || 'bg-primary';
-  };
+
+  // getCategoryColor is imported from @/lib/categoryUtils
+
 
   const toggleSection = (id: string) => {
     setSections(sections.map(s =>
@@ -462,7 +450,7 @@ const AdminSections = () => {
                               <Badge variant="secondary" className="text-[10px] h-5 px-2 font-medium bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">{article.category}</Badge>
                               <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
                                 <Eye className="h-3.5 w-3.5" />
-                                {article.views.toLocaleString()}
+                                {(article.views || 0).toLocaleString()}
                               </span>
                             </div>
                           </div>
@@ -485,13 +473,13 @@ const AdminSections = () => {
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                     {availableArticles
                       .filter(a => !sections.find(s => s.id === 'trending')?.selectedArticleIds.includes(a.id))
-                      .sort((a, b) => b.views - a.views)
+                      .sort((a, b) => (b.views || 0) - (a.views || 0))
                       .slice(0, 10)
                       .map((article) => (
                         <div key={article.id} className="flex items-center gap-2 p-2 border border-border rounded-lg">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium line-clamp-2 break-words leading-tight">{article.title}</p>
-                            <p className="text-xs text-muted-foreground">{article.views.toLocaleString()} views</p>
+                            <p className="text-xs text-muted-foreground">{(article.views || 0).toLocaleString()} views</p>
                           </div>
                           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => addArticleToSection('trending', article.id)}>
                             <Plus className="h-4 w-4" />
