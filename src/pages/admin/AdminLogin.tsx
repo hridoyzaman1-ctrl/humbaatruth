@@ -73,9 +73,9 @@ const AdminLogin = () => {
 
     try {
       // 1. Attempt Login
-      const success = await login(email, password, rememberMe);
+      const result = await login(email, password, rememberMe);
 
-      if (success) {
+      if (result.success) {
         // Success! The AdminAuthContext handles setting the currentUser 
         // and its useEffect will handle the redirect.
         toast.success('Welcome back!');
@@ -83,7 +83,13 @@ const AdminLogin = () => {
         // but since we've alerted success, the useEffect in this component will trigger.
       } else {
         rateLimiter.recordAttempt(false);
-        setError('Invalid credentials. Please try again.');
+        if (result.error?.includes("Email not confirmed")) {
+          setError('Your email is not confirmed. Please check your inbox or contact an admin.');
+        } else if (result.error?.includes("Invalid login credentials")) {
+          setError('Invalid email or password.');
+        } else {
+          setError(result.error || 'Login failed.');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -152,7 +158,7 @@ const AdminLogin = () => {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value.trim())}
                     placeholder="admin@truthlens.com"
                     className="pl-10"
                     required

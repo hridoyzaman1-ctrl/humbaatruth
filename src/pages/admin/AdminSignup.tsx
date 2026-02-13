@@ -190,7 +190,7 @@ const AdminSignup = () => {
                                         placeholder="email@example.com"
                                         className="pl-9"
                                         value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                        onChange={e => setFormData({ ...formData, email: e.target.value.trim() })}
                                         required
                                     />
                                 </div>

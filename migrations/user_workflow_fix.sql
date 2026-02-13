@@ -1,11 +1,8 @@
 -- ============================================================================
--- USER WORKFLOW & SIGNUP FIX
--- This script fixes the "Database error saving new user" and implements
--- the purging logic required for rejected users to sign up again.
+-- USER WORKFLOW & SIGNUP FIX (COMPLETE)
 -- ============================================================================
 
--- 1. Create a robust handle_new_user function
--- This version uses ON CONFLICT and COALESCE to prevent errors
+-- 1. Create a robust handle_new_user function that AUTO-CONFIRMS emails
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -25,6 +22,12 @@ BEGIN
     email = EXCLUDED.email,
     name = COALESCE(EXCLUDED.name, public.authors.name),
     status = COALESCE(EXCLUDED.status, public.authors.status);
+    
+  -- AUTO-CONFIRM EMAIL (Critical Fix)
+  -- We trust the Admin Approval process, so we skip email verification.
+  UPDATE auth.users
+  SET email_confirmed_at = now()
+  WHERE id = new.id;
   
   RETURN new;
 END;
@@ -37,22 +40,16 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- 3. Create the PURGE function (Admin only logic)
--- This allows deleting a user from BOTH auth and public schemas
--- so they can sign up again with the same email.
 CREATE OR REPLACE FUNCTION delete_user_entirely(target_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
-    -- Delete from public.authors first
     DELETE FROM public.authors WHERE id = target_user_id;
-    
-    -- Delete from auth.users (requires service role / security definer)
     DELETE FROM auth.users WHERE id = target_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Update RLS policies to allow the purge function to be called
--- Note: The function itself is SECURITY DEFINER, so it runs with high privilege. 
--- We just need to make sure RLS on authors doesn't block the internal delete.
-
--- 5. Final verification check
-SELECT 'USER WORKFLOW FIX APPLIED SUCCESSFULLY' AS result;
+-- 4. RETROACTIVE FIX: Confirm ALL existing users
+-- This fixes the issue for admins who are already "accepted" but can't login.
+UPDATE auth.users
+SET email_confirmed_at = now()
+WHERE email_confirmed_at IS NULL;

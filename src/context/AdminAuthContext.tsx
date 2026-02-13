@@ -10,7 +10,7 @@ interface AdminAuthContextType {
   currentUser: ExtendedAdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   hasPermission: (permission: keyof RolePermissions) => boolean;
   canAccessPath: (path: string) => boolean;
@@ -73,8 +73,9 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => subscription.unsubscribe();
   }, [initAuth]);
 
-  const login = useCallback(async (email: string, password: string, rememberMe = false): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, rememberMe = false): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -83,11 +84,30 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (error) {
       console.error("Login Result: Error", error.message);
       setIsLoading(false);
-      return false;
+      return { success: false, error: error.message };
     }
 
-    // onAuthStateChange handles state
-    return true;
+    // Proactive profile check with local retry
+    let profile = await userService.authenticate(email);
+
+    if (!profile) {
+      console.warn("Profile not found immediately, retrying in 1s...");
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      profile = await userService.authenticate(email);
+    }
+
+    if (!profile) {
+      console.error("Auth succeeded but NO PROFILE found after retry.");
+      await supabase.auth.signOut();
+      setIsLoading(false);
+      return {
+        success: false,
+        error: "Login successful, but your admin profile record is missing. Please contact a Super Admin to verify your 'authors' record."
+      };
+    }
+
+    setCurrentUser(profile);
+    return { success: true };
   }, []);
 
   const logout = useCallback(async () => {
